@@ -166,18 +166,17 @@
             width: 100%;
             height: 1px;
             background-color: #000;
-            bottom: auto !important;
         }
 
-        /* Underline positions adjusted for font box offset */
-        .text-title { font-size: 13.5mm !important; }
-        .text-title::after { top: 12.5mm !important; } 
-
-        .text-name { font-size: 6.75mm !important; }
-        .text-name::after { top: 6.5mm !important; } 
+        /* EXACT MEASUREMENTS */
+        .text-name { font-size: 5mm !important; }
+        .text-name::after { bottom: -1mm; } /* Underline 1mm below baseline */
         
-        .text-detail { font-size: 5.4mm !important; }
-        .text-detail::after { top: 5.5mm !important; }
+        .text-detail { font-size: 4mm !important; }
+        .text-detail::after { bottom: -1mm; } /* Underline 1mm below baseline */
+
+        .text-title { font-size: 10mm !important; }
+        .text-title::after { bottom: -1mm; } /* Underline 1mm below baseline */
 
     </style>
 </head>
@@ -237,27 +236,6 @@
     <script>
         const { jsPDF } = window.jspdf;
 
-        // --- CONFIGURATION ---
-        const GLYPH_SCALE = 1.35;
-        const TITLE_VISIBLE_HEIGHT = 10;
-        const NAME_VISIBLE_HEIGHT = 5;
-        const DETAIL_VISIBLE_HEIGHT = 4;
-        const ptPerMm = 2.83465; 
-
-        // X_OFFSET: The empty space (bearing) on the left/right side of every character inside the font box.
-        // Adjust this value if the spacing is still not perfect.
-        const X_OFFSET = 0.1; 
-
-        // Calculated Font Sizes
-        const TITLE_FONT_MM = TITLE_VISIBLE_HEIGHT * GLYPH_SCALE;
-        const NAME_FONT_MM = NAME_VISIBLE_HEIGHT * GLYPH_SCALE;
-        const DETAIL_FONT_MM = DETAIL_VISIBLE_HEIGHT * GLYPH_SCALE;
-
-        // Calculated Spacing (Target - 2 * X_Offset)
-        const LETTER_GAP = 1 - (2 * X_OFFSET);
-        const WORD_GAP_TITLE = 5 - (2 * X_OFFSET);
-        const WORD_GAP_DETAIL = 3 - (2 * X_OFFSET);
-
         let activeFontName = 'helvetica';
         let fontReady = false;
 
@@ -265,7 +243,7 @@
             const statusEl = document.getElementById('fontStatus');
             if(!statusEl) return;
             statusEl.className = `font-status ${status}`;
-            const icons = { loading: '', success: '✓', error: '' };
+            const icons = { loading: '⏳', success: '✓', error: '✗' };
             statusEl.innerHTML = `<span>${icons[status]}</span> ${message}`;
         }
 
@@ -281,19 +259,30 @@
                 }
             `;
             document.head.appendChild(style);
+            console.log('✓ Simplex font injected as data URI');
         }
 
         async function loadCustomFont() {
             try {
-                const response = await fetch('./Simplex.ttf?v=' + Date.now(), { cache: 'no-store' });
-                if (!response.ok) throw new Error(`HTTP ${response.status}: File not found`);
+                console.log('Attempting to load Simplex.ttf...');
+                
+                const response = await fetch('./Simplex.ttf?v=' + Date.now(), { 
+                    cache: 'no-store' 
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: File not found`);
+                }
                 
                 const buffer = await response.arrayBuffer();
                 const bytes = new Uint8Array(buffer);
+                
                 if (bytes.length < 1000) throw new Error('File too small');
                 
                 let binary = '';
-                for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+                for (let i = 0; i < bytes.byteLength; i++) {
+                    binary += String.fromCharCode(bytes[i]);
+                }
                 const base64 = btoa(binary);
 
                 injectFontAsDataURI(base64);
@@ -304,11 +293,15 @@
                 
                 activeFontName = 'Simplex';
                 fontReady = true;
+                
                 updateFontStatus('success', `Simplex font loaded (${(bytes.length / 1024).toFixed(1)} KB)`);
+                console.log('✓ Simplex font loaded');
+                
                 updatePreview();
                 
             } catch (error) {
-                updateFontStatus('error', `Font not found. Check: ${error.message}`);
+                console.error('Font loading error:', error);
+                updateFontStatus('error', `Font not found. Using fallback. Check: ${error.message}`);
                 fontReady = true;
             }
         }
@@ -325,7 +318,11 @@
         };
 
         inputs.date.valueAsDate = new Date();
-        Object.values(inputs).forEach(input => input.addEventListener('input', updatePreview));
+
+        Object.values(inputs).forEach(input => {
+            input.addEventListener('input', updatePreview);
+        });
+
         updatePreview();
 
         function getFormData() {
@@ -339,111 +336,118 @@
             };
         }
 
-        // FIXED: Uses calculated gaps (Target - 2*X_Offset)
-        function getSpacedTextWidth(doc, text, fontSizeMM, charSpaceMM, wordSpaceMM) {
-            doc.setFontSize(fontSizeMM * ptPerMm);
+        // Calculate width with exact spacing
+        function getSpacedTextWidth(doc, text, fontSize, charSpaceMM, wordSpaceMM) {
+            doc.setFontSize(fontSize);
+            doc.setCharSpace(charSpaceMM);
+            
             const words = text.split(' ');
             let totalWidth = 0;
             
-            for (let w = 0; w < words.length; w++) {
-                const word = words[w];
-                for (let c = 0; c < word.length; c++) {
-                    totalWidth += doc.getTextWidth(word[c]);
-                    if (c < word.length - 1) {
-                        totalWidth += charSpaceMM; // Uses LETTER_GAP
-                    }
-                }
-                if (w < words.length - 1) {
-                    totalWidth += wordSpaceMM; // Uses WORD_GAP
+            for (let i = 0; i < words.length; i++) {
+                totalWidth += doc.getTextWidth(words[i]);
+                if (i < words.length - 1) {
+                    totalWidth += wordSpaceMM;
                 }
             }
+            
+            doc.setCharSpace(0);
             return totalWidth;
         }
 
-        // FIXED: Draws character by character with calculated gaps
-        function drawSpacedText(doc, text, startX, baselineY, fontSizeMM, charSpaceMM, wordSpaceMM) {
-            doc.setFontSize(fontSizeMM * ptPerMm);
+        // Draw text with exact spacing
+        function drawSpacedText(doc, text, startX, baselineY, fontSize, charSpaceMM, wordSpaceMM) {
+            doc.setFontSize(fontSize);
+            doc.setCharSpace(charSpaceMM);
+            
             const words = text.split(' ');
             let currentX = startX;
             
-            for (let w = 0; w < words.length; w++) {
-                const word = words[w];
-                for (let c = 0; c < word.length; c++) {
-                    doc.text(word[c], currentX, baselineY);
-                    currentX += doc.getTextWidth(word[c]);
-                    if (c < word.length - 1) {
-                        currentX += charSpaceMM; // Uses LETTER_GAP
-                    }
-                }
-                if (w < words.length - 1) {
-                    currentX += wordSpaceMM; // Uses WORD_GAP
+            for (let i = 0; i < words.length; i++) {
+                doc.text(words[i], currentX, baselineY);
+                currentX += doc.getTextWidth(words[i]);
+                if (i < words.length - 1) {
+                    currentX += wordSpaceMM;
                 }
             }
+            
+            doc.setCharSpace(0);
             return currentX;
         }
 
         function calculateLayout(data) {
             const doc = new jsPDF({ unit: 'mm', format: 'a4' });
             doc.setFont(activeFontName, 'normal');
+            
+            const ptPerMm = 2.83465;
 
+            // 1. Filter valid bottom-right items
             const items = [];
-            // Pass the calculated gaps (WORD_GAP_DETAIL)
-            if (data.name) items.push({ id: 'name', text: data.name, visibleHeight: NAME_VISIBLE_HEIGHT, fontSizeMM: NAME_FONT_MM, charSpace: LETTER_GAP, wordSpace: WORD_GAP_DETAIL });
-            if (data.eNumber) items.push({ id: 'eNumber', text: data.eNumber, visibleHeight: DETAIL_VISIBLE_HEIGHT, fontSizeMM: DETAIL_FONT_MM, charSpace: LETTER_GAP, wordSpace: WORD_GAP_DETAIL });
-            if (data.group) items.push({ id: 'group', text: data.group, visibleHeight: DETAIL_VISIBLE_HEIGHT, fontSizeMM: DETAIL_FONT_MM, charSpace: LETTER_GAP, wordSpace: WORD_GAP_DETAIL });
-            if (data.semester) items.push({ id: 'semester', text: data.semester, visibleHeight: DETAIL_VISIBLE_HEIGHT, fontSizeMM: DETAIL_FONT_MM, charSpace: LETTER_GAP, wordSpace: WORD_GAP_DETAIL });
-            if (data.date) items.push({ id: 'date', text: data.date, visibleHeight: DETAIL_VISIBLE_HEIGHT, fontSizeMM: DETAIL_FONT_MM, charSpace: LETTER_GAP, wordSpace: WORD_GAP_DETAIL });
+            if (data.name) items.push({ id: 'name', text: data.name, height: 5, fontSize: 5 * ptPerMm, charSpace: 1, wordSpace: 3 });
+            if (data.eNumber) items.push({ id: 'eNumber', text: data.eNumber, height: 4, fontSize: 4 * ptPerMm, charSpace: 1, wordSpace: 3 });
+            if (data.group) items.push({ id: 'group', text: data.group, height: 4, fontSize: 4 * ptPerMm, charSpace: 1, wordSpace: 3 });
+            if (data.semester) items.push({ id: 'semester', text: data.semester, height: 4, fontSize: 4 * ptPerMm, charSpace: 1, wordSpace: 3 });
+            if (data.date) items.push({ id: 'date', text: data.date, height: 4, fontSize: 4 * ptPerMm, charSpace: 1, wordSpace: 3 });
 
+            // 2. Find the LONGEST line
             let maxWidth = 0;
             items.forEach(item => {
-                item.width = getSpacedTextWidth(doc, item.text, item.fontSizeMM, item.charSpace, item.wordSpace);
+                item.width = getSpacedTextWidth(doc, item.text, item.fontSize, item.charSpace, item.wordSpace);
                 if (item.width > maxWidth) maxWidth = item.width;
             });
 
-            const startX = (198 - 10) - maxWidth;
+            const rightBorderX = 198;
+            const endX = rightBorderX - 10;
+            const startX = endX - maxWidth;
 
+            // 3. Calculate Y-Axis (Bottom-Up)
             if (items.length > 0) {
                 for (let i = items.length - 1; i >= 0; i--) {
                     const item = items[i];
                     if (i === items.length - 1) {
-                        item.underlineY = 270;
+                        item.underlineY = 270; // 15mm above bottom border
                     } else {
                         const nextItem = items[i + 1];
-                        item.underlineY = (nextItem.baselineY - nextItem.visibleHeight) - 3;
+                        item.underlineY = (nextItem.baselineY - nextItem.height) - 3;
                     }
-                    item.baselineY = item.underlineY - 1;
-                    item.topY = item.baselineY - item.visibleHeight;
+                    item.baselineY = item.underlineY - 1; // Underline 1mm below baseline
+                    item.topY = item.baselineY - item.height;
                     item.x = startX;
                 }
             }
 
             const targetTopY = items.length > 0 ? items[0].topY : 250;
 
+            // 4. Title Block - EXACTLY 10mm HEIGHT
+            const titleFontSize = 10 * ptPerMm; // 28.35pt = 10mm
+            
             const rawTitleLines = data.title.split('\n').map(l => l.trim()).filter(l => l !== '');
             const titleLines = [];
-            // Pass the calculated gaps (WORD_GAP_TITLE)
+
             rawTitleLines.forEach(lineText => {
-                const lineWidth = getSpacedTextWidth(doc, lineText, TITLE_FONT_MM, LETTER_GAP, WORD_GAP_TITLE);
+                const lineWidth = getSpacedTextWidth(doc, lineText, titleFontSize, 1, 5);
                 titleLines.push({ text: lineText, width: lineWidth });
             });
 
             if (titleLines.length === 0) {
-                const fallbackWidth = getSpacedTextWidth(doc, 'TITLE OF EXPERIMENT', TITLE_FONT_MM, LETTER_GAP, WORD_GAP_TITLE);
+                const fallbackWidth = getSpacedTextWidth(doc, 'TITLE OF EXPERIMENT', titleFontSize, 1, 5);
                 titleLines.push({ text: 'TITLE OF EXPERIMENT', width: fallbackWidth });
             }
 
             const numLines = titleLines.length;
-            const titleBlockHeight = (numLines * (TITLE_VISIBLE_HEIGHT + 1)) + ((numLines - 1) * 5);
+            const titleBlockHeight = (numLines * 11) + ((numLines - 1) * 5);
+            
             const midY = (12 + targetTopY) / 2;
             const titleBlockTopY = midY - (titleBlockHeight / 2);
 
             let currentY = titleBlockTopY;
             titleLines.forEach((line, index) => {
                 line.topY = currentY;
-                line.baselineY = currentY + TITLE_VISIBLE_HEIGHT;
-                line.underlineY = currentY + TITLE_VISIBLE_HEIGHT + 1;
-                line.x = (210 - line.width) / 2;
-                currentY = line.underlineY + 5;
+                line.baselineY = currentY + 10; // 10mm text height
+                line.underlineY = currentY + 11; // Underline 1mm below baseline
+                line.x = (210 - line.width) / 2; // Centered horizontally
+                
+                currentY = line.underlineY + 5; // 5mm gap to next line
             });
 
             return { items, titleLines };
@@ -477,7 +481,9 @@
         async function generatePDF() {
             if (!fontReady) {
                 document.getElementById('downloadBtn').innerText = 'Loading Font...';
-                while (!fontReady) await new Promise(resolve => setTimeout(resolve, 100));
+                while (!fontReady) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
             }
 
             const btn = document.getElementById('downloadBtn');
@@ -487,6 +493,7 @@
             setTimeout(() => {
                 const data = getFormData();
                 const layout = calculateLayout(data);
+                
                 const doc = new jsPDF({ unit: 'mm', format: 'a4' });
                 doc.setFont(activeFontName, 'normal');
                 doc.setTextColor(0, 0, 0);
@@ -494,16 +501,16 @@
                 doc.setLineWidth(0.8);
                 doc.rect(12, 12, 186, 273);
 
+                // Title - 10mm height, underline 1mm below
                 layout.titleLines.forEach(line => {
-                    // Pass LETTER_GAP and WORD_GAP_TITLE
-                    drawSpacedText(doc, line.text, line.x, line.baselineY, TITLE_FONT_MM, LETTER_GAP, WORD_GAP_TITLE);
+                    drawSpacedText(doc, line.text, line.x, line.baselineY, 10 * 2.83465, 1, 5);
                     doc.setLineWidth(0.5);
                     doc.line(line.x, line.underlineY, line.x + line.width, line.underlineY);
                 });
 
+                // Details - underline 1mm below each text
                 layout.items.forEach(item => {
-                    // Pass LETTER_GAP and WORD_GAP_DETAIL
-                    drawSpacedText(doc, item.text, item.x, item.baselineY, item.fontSizeMM, LETTER_GAP, WORD_GAP_DETAIL);
+                    drawSpacedText(doc, item.text, item.x, item.baselineY, item.fontSize, 1, 3);
                     doc.setLineWidth(0.5);
                     doc.line(item.x, item.underlineY, item.x + item.width, item.underlineY);
                 });
