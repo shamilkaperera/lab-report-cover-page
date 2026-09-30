@@ -3,21 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A4 Cover Page Generator - Simplex CAD Font</title>
-    <!-- jsPDF CDN -->
+    <title>A4 Cover Page Generator - Helvetica Thin</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        /* 
-         * FONT SETUP 
-         * Place 'Simplex.ttf' in the same directory as this HTML file.
-         */
-        @font-face {
-            font-family: 'Simplex';
-            src: url('Simplex.ttf') format('truetype');
-            font-weight: normal;
-            font-style: normal;
-        }
-
         :root {
             --bg-color: #f3f4f6;
             --panel-bg: #ffffff;
@@ -29,7 +17,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--bg-color);
             color: #1f2937;
             height: 100vh;
@@ -37,7 +25,6 @@
             overflow: hidden;
         }
 
-        /* --- Left Panel: Form --- */
         .form-panel {
             width: 380px;
             background: var(--panel-bg);
@@ -54,16 +41,37 @@
         .form-panel h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 10px; }
         .form-panel p { font-size: 0.875rem; color: #6b7280; margin-bottom: 20px; line-height: 1.5; }
 
+        .font-status {
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .font-status.loading { background: #fef3c7; color: #92400e; border: 1px solid #fbbf24; }
+        .font-status.success { background: #d1fae5; color: #065f46; border: 1px solid #34d399; }
+        .font-status.error { background: #fee2e2; color: #991b1b; border: 1px solid #f87171; }
+
         .input-group { display: flex; flex-direction: column; gap: 6px; }
         .input-group label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #4b5563; }
-        .input-group input {
+        
+        .input-group input, .input-group textarea {
             padding: 10px 12px;
             border: 1px solid var(--border-color);
             border-radius: 6px;
             font-size: 0.95rem;
+            font-family: inherit;
             transition: border-color 0.2s, box-shadow 0.2s;
         }
-        .input-group input:focus {
+        
+        .input-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .input-group input:focus, .input-group textarea:focus {
             outline: none;
             border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
@@ -88,7 +96,6 @@
         .btn-download:hover { background-color: var(--primary-hover); }
         .btn-download:disabled { background-color: #9ca3af; cursor: not-allowed; }
 
-        /* --- Right Panel: Preview --- */
         .preview-panel {
             flex: 1;
             display: flex;
@@ -115,7 +122,6 @@
             backdrop-filter: blur(4px);
         }
 
-        /* A4 Page Container */
         .a4-page {
             width: 210mm;
             height: 297mm;
@@ -126,7 +132,6 @@
             transform-origin: top center;
         }
 
-        /* Responsive scaling for the preview */
         @media (max-height: 900px) { .a4-page { transform: scale(0.85); margin-top: -40mm; } }
         @media (max-height: 750px) { .a4-page { transform: scale(0.7); margin-top: -80mm; } }
         @media (max-width: 900px) { 
@@ -136,7 +141,6 @@
             .a4-page { transform: scale(0.5); margin-top: -140mm; margin-bottom: -140mm; }
         }
 
-        /* --- PDF Elements Styling (Matches jsPDF logic) --- */
         .frame-border {
             position: absolute;
             top: 12mm;
@@ -147,13 +151,13 @@
             pointer-events: none;
         }
 
+        /* Font will be applied via JavaScript data URI */
         .pdf-text {
             position: absolute;
-            white-space: nowrap;
-            font-family: 'Simplex', 'Arial', 'Helvetica', sans-serif;
+            white-space: pre;
+            font-family: 'UploadedFont' !important;
             color: #000;
             line-height: 1;
-            font-weight: 600; /* THICKER FONT FOR PREVIEW */
         }
 
         .pdf-text::after {
@@ -161,34 +165,37 @@
             position: absolute;
             left: 0;
             width: 100%;
-            height: 1px; /* THICKER UNDERLINE */
+            height: 1px;
             background-color: #000;
         }
 
-        .text-name { font-size: 5mm; }
+        .text-name { font-size: 5mm !important; }
         .text-name::after { bottom: -1mm; }
         
-        .text-detail { font-size: 4mm; }
+        .text-detail { font-size: 4mm !important; }
         .text-detail::after { bottom: -1mm; }
 
-        .text-title { font-size: 10mm; font-weight: 600; } /* THICKER TITLE */
+        .text-title { font-size: 10mm !important; }
         .text-title::after { bottom: -1mm; }
 
     </style>
 </head>
 <body>
 
-    <!-- LEFT PANEL: FORM -->
     <div class="form-panel">
         <div>
             <h2>Cover Page Designer</h2>
-            <p>Fill in the details. Empty fields (except Title) will be automatically skipped in the layout.</p>
+            <p>Fill in the details. Press <strong>Enter</strong> in the Title box to add as many lines as you need.</p>
+        </div>
+
+        <div id="fontStatus" class="font-status loading">
+            <span>⏳</span> Loading Helvetica-Thin font...
         </div>
 
         <form id="coverForm">
             <div class="input-group">
-                <label for="title">Title of Experiment *</label>
-                <input type="text" id="title" placeholder="e.g., MECHANICS OF VIBRATIONS" required>
+                <label for="title">Title of Experiment * (Press Enter for new line)</label>
+                <textarea id="title" rows="4" placeholder="e.g., MECHANICS&#10;OF VIBRATIONS&#10;AND CONTROL&#10;SYSTEMS" required></textarea>
             </div>
             <div class="input-group">
                 <label for="name">Name</label>
@@ -218,46 +225,96 @@
         </form>
     </div>
 
-    <!-- RIGHT PANEL: LIVE PREVIEW -->
     <div class="preview-panel">
         <div class="preview-header">Live A4 Preview</div>
         <div class="a4-page" id="a4Page">
             <div class="frame-border"></div>
-            <div id="previewContent">
-                <!-- Dynamically populated by JS -->
-            </div>
+            <div id="previewContent"></div>
         </div>
     </div>
 
     <script>
         const { jsPDF } = window.jspdf;
 
-        // =====================================================================
-        // FONT CONFIGURATION
-        // Replace the string below with the actual Base64 encoded content of Simplex.ttf
-        // =====================================================================
-        const SIMPLEX_FONT_BASE64 = "AAEAAAARAQAABAAQR0RFRgAAAAAAAAA..."; // <-- REPLACE WITH ACTUAL BASE64
-        
-        let fontLoaded = false;
         let activeFontName = 'helvetica';
+        let fontReady = false;
+        let fontBase64 = '';
 
-        // Attempt to register the custom font
-        try {
-            if (SIMPLEX_FONT_BASE64.length > 1000) {
-                const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-                doc.addFileToVFS('Simplex.ttf', SIMPLEX_FONT_BASE64);
-                doc.addFont('Simplex.ttf', 'Simplex', 'normal');
-                activeFontName = 'Simplex';
-                fontLoaded = true;
-                console.log("✓ Simplex font loaded successfully");
-            } else {
-                console.warn(" Simplex font base64 not provided. Using fallback font.");
-            }
-        } catch (e) {
-            console.warn("Custom font not loaded. Using fallback.", e);
+        function updateFontStatus(status, message) {
+            const statusEl = document.getElementById('fontStatus');
+            if(!statusEl) return;
+            statusEl.className = `font-status ${status}`;
+            const icons = { loading: '⏳', success: '✓', error: '✗' };
+            statusEl.innerHTML = `<span>${icons[status]}</span> ${message}`;
         }
 
-        // Form elements
+        // INJECT FONT INTO BROWSER VIA DATA URI
+        function injectFontAsDataURI(base64) {
+            const style = document.createElement('style');
+            style.textContent = `
+                @font-face {
+                    font-family: 'UploadedFont';
+                    src: url('data:font/truetype;base64,${base64}') format('truetype');
+                    font-weight: normal;
+                    font-style: normal;
+                    font-display: swap;
+                }
+            `;
+            document.head.appendChild(style);
+            console.log('✓ Font injected as data URI into browser CSS');
+        }
+
+        async function loadCustomFont() {
+            try {
+                console.log('Attempting to load Helvetica-Thin.ttf...');
+                
+                const response = await fetch('./Helvetica-Thin.ttf?v=' + Date.now(), { 
+                    cache: 'no-store' 
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: File not found`);
+                }
+                
+                const buffer = await response.arrayBuffer();
+                const bytes = new Uint8Array(buffer);
+                
+                if (bytes.length < 1000) throw new Error('File too small');
+                
+                // Convert to Base64
+                let binary = '';
+                for (let i = 0; i < bytes.byteLength; i++) {
+                    binary += String.fromCharCode(bytes[i]);
+                }
+                const base64 = btoa(binary);
+                fontBase64 = base64;
+
+                // 1. INJECT INTO BROWSER CSS (for preview)
+                injectFontAsDataURI(base64);
+
+                // 2. INJECT INTO JSPDF (for PDF download)
+                const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+                doc.addFileToVFS('Helvetica-Thin.ttf', base64);
+                doc.addFont('Helvetica-Thin.ttf', 'UploadedFont', 'normal');
+                
+                activeFontName = 'UploadedFont';
+                fontReady = true;
+                
+                updateFontStatus('success', `Helvetica-Thin loaded (${(bytes.length / 1024).toFixed(1)} KB) - Preview & PDF ready!`);
+                console.log('✓ Font loaded for both preview and PDF');
+                
+                // Refresh preview to show new font
+                updatePreview();
+                
+            } catch (error) {
+                console.error('Font loading error:', error);
+                updateFontStatus('error', `Font not found. Using fallback. Check: ${error.message}`);
+                fontReady = true;
+            }
+        }
+
+        loadCustomFont();
+
         const inputs = {
             title: document.getElementById('title'),
             name: document.getElementById('name'),
@@ -267,20 +324,17 @@
             date: document.getElementById('date')
         };
 
-        // Set default date to today
         inputs.date.valueAsDate = new Date();
 
-        // Listen for changes to update live preview
         Object.values(inputs).forEach(input => {
             input.addEventListener('input', updatePreview);
         });
 
-        // Initial render
         updatePreview();
 
         function getFormData() {
             return {
-                title: inputs.title.value.trim().toUpperCase() || 'TITLE OF EXPERIMENT',
+                title: inputs.title.value.toUpperCase() || 'TITLE OF EXPERIMENT',
                 name: inputs.name.value.trim().toUpperCase(),
                 eNumber: inputs.eNumber.value.trim().toUpperCase(),
                 group: inputs.group.value.trim().toUpperCase(),
@@ -289,79 +343,49 @@
             };
         }
 
-        // Helper: Calculate exact width of text with custom char/word spacing
         function getSpacedTextWidth(doc, text, fontSize, charSpaceMM, wordSpaceMM) {
             doc.setFontSize(fontSize);
             doc.setCharSpace(charSpaceMM);
+            
             const words = text.split(' ');
             let totalWidth = 0;
+            
             for (let i = 0; i < words.length; i++) {
                 totalWidth += doc.getTextWidth(words[i]);
                 if (i < words.length - 1) {
                     totalWidth += wordSpaceMM;
                 }
             }
+            
             doc.setCharSpace(0);
             return totalWidth;
         }
 
-        // Helper: Draw text with exact spacing and return end X coordinate
-        function drawSpacedText(doc, text, x, y, fontSize, charSpaceMM, wordSpaceMM) {
+        function drawSpacedText(doc, text, startX, baselineY, fontSize, charSpaceMM, wordSpaceMM) {
             doc.setFontSize(fontSize);
             doc.setCharSpace(charSpaceMM);
+            
             const words = text.split(' ');
-            let currentX = x;
+            let currentX = startX;
+            
             for (let i = 0; i < words.length; i++) {
-                doc.text(words[i], currentX, y);
-                currentX += doc.getTextWidth(words[i]) + wordSpaceMM;
-            }
-            doc.setCharSpace(0);
-            return currentX - wordSpaceMM;
-        }
-
-        // Helper: Wrap title text at word boundaries without splitting words
-        function wrapTitleText(doc, text, fontSize, charSpaceMM, wordSpaceMM, maxWidth) {
-            const words = text.split(' ');
-            const lines = [];
-            let currentLine = [];
-            let currentWidth = 0;
-
-            for (let i = 0; i < words.length; i++) {
-                const word = words[i];
-                const wordWidth = getSpacedTextWidth(doc, word, fontSize, charSpaceMM, wordSpaceMM);
-                const spaceNeeded = currentLine.length > 0 ? wordSpaceMM : 0;
-                
-                // Check if adding this word would exceed max width
-                if (currentWidth + spaceNeeded + wordWidth <= maxWidth) {
-                    currentLine.push(word);
-                    currentWidth += spaceNeeded + wordWidth;
-                } else {
-                    // Save current line and start new one
-                    if (currentLine.length > 0) {
-                        lines.push(currentLine.join(' '));
-                    }
-                    currentLine = [word];
-                    currentWidth = wordWidth;
+                doc.text(words[i], currentX, baselineY);
+                currentX += doc.getTextWidth(words[i]);
+                if (i < words.length - 1) {
+                    currentX += wordSpaceMM;
                 }
             }
             
-            // Don't forget the last line
-            if (currentLine.length > 0) {
-                lines.push(currentLine.join(' '));
-            }
-
-            // Limit to 2 lines max
-            return lines.slice(0, 2);
+            doc.setCharSpace(0);
+            return currentX;
         }
 
         function calculateLayout(data) {
             const doc = new jsPDF({ unit: 'mm', format: 'a4' });
             doc.setFont(activeFontName, 'normal');
             
-            // 1 pt = 0.352778 mm. Therefore, mm to pt = mm / 0.352778
             const ptPerMm = 2.83465;
 
-            // 1. Filter valid bottom-right items
             const items = [];
             if (data.name) items.push({ id: 'name', text: data.name, height: 5, fontSize: 5 * ptPerMm, charSpace: 1, wordSpace: 3 });
             if (data.eNumber) items.push({ id: 'eNumber', text: data.eNumber, height: 4, fontSize: 4 * ptPerMm, charSpace: 1, wordSpace: 3 });
@@ -369,71 +393,62 @@
             if (data.semester) items.push({ id: 'semester', text: data.semester, height: 4, fontSize: 4 * ptPerMm, charSpace: 1, wordSpace: 3 });
             if (data.date) items.push({ id: 'date', text: data.date, height: 4, fontSize: 4 * ptPerMm, charSpace: 1, wordSpace: 3 });
 
-            // 2. Calculate X-Axis (Right Alignment Logic)
-            // Find the LONGEST line - this determines where ALL lines start
             let maxWidth = 0;
             items.forEach(item => {
                 item.width = getSpacedTextWidth(doc, item.text, item.fontSize, item.charSpace, item.wordSpace);
                 if (item.width > maxWidth) maxWidth = item.width;
             });
 
-            // Right page border is at 198mm (210mm - 12mm margin)
-            // Longest line must end 10mm to the left of right border = 188mm
-            // So startX = 188mm - maxWidth
             const rightBorderX = 198;
-            const endX = rightBorderX - 10; // 188mm
+            const endX = rightBorderX - 10;
             const startX = endX - maxWidth;
 
-            // 3. Calculate Y-Axis (Bottom-Up Anchoring)
             if (items.length > 0) {
                 for (let i = items.length - 1; i >= 0; i--) {
                     const item = items[i];
                     if (i === items.length - 1) {
-                        item.underlineY = 270; // 15mm above bottom border (285 - 15)
+                        item.underlineY = 270;
                     } else {
                         const nextItem = items[i + 1];
-                        // Distance between underline of top item and top of text of item below = 3mm
                         item.underlineY = (nextItem.baselineY - nextItem.height) - 3;
                     }
-                    item.baselineY = item.underlineY - 1; // Underline is 1mm below baseline
+                    item.baselineY = item.underlineY - 1;
                     item.topY = item.baselineY - item.height;
-                    item.x = startX; // All lines start at same X (left-aligned)
+                    item.x = startX;
                 }
             }
 
-            const targetTopY = items.length > 0 ? items[0].topY : 250; // Fallback if no details
+            const targetTopY = items.length > 0 ? items[0].topY : 250;
 
-            // 4. Title Block Calculation
-            const titleFontSize = 10 * ptPerMm; // 28.35 pt
-            const titleStartX = 37; // 25mm from left border (12mm + 25mm)
-            const rightPageBorder = 198;
-            const titleMaxEndX = rightPageBorder - 25; // 173mm (25mm from right border)
-            const titleMaxWidth = titleMaxEndX - titleStartX; // 173 - 37 = 136mm
-
-            // Wrap title text if it exceeds max width
-            const titleLines = wrapTitleText(doc, data.title, titleFontSize, 1, 5, titleMaxWidth);
-
-            const titleBlockHeight = titleLines.length === 1 ? (10 + 1) : (10 + 1 + 5 + 10 + 1); // 11mm or 27mm
+            const titleFontSize = 10 * ptPerMm;
             
-            // Vertically center between top border (12mm) and targetTopY
+            const rawTitleLines = data.title.split('\n').map(l => l.trim()).filter(l => l !== '');
+            const titleLines = [];
+
+            rawTitleLines.forEach(lineText => {
+                const lineWidth = getSpacedTextWidth(doc, lineText, titleFontSize, 1, 5);
+                titleLines.push({ text: lineText, width: lineWidth });
+            });
+
+            if (titleLines.length === 0) {
+                const fallbackWidth = getSpacedTextWidth(doc, 'TITLE OF EXPERIMENT', titleFontSize, 1, 5);
+                titleLines.push({ text: 'TITLE OF EXPERIMENT', width: fallbackWidth });
+            }
+
+            const numLines = titleLines.length;
+            const titleBlockHeight = (numLines * 11) + ((numLines - 1) * 5);
+            
             const midY = (12 + targetTopY) / 2;
             const titleBlockTopY = midY - (titleBlockHeight / 2);
 
             let currentY = titleBlockTopY;
-            titleLines.forEach((lineText, index) => {
-                const lineWidth = getSpacedTextWidth(doc, lineText, titleFontSize, 1, 5);
-                titleLines[index] = {
-                    text: lineText,
-                    width: lineWidth,
-                    topY: currentY,
-                    baselineY: currentY + 10,
-                    underlineY: currentY + 10 + 1,
-                    x: titleStartX // Left-aligned at 37mm
-                };
+            titleLines.forEach((line, index) => {
+                line.topY = currentY;
+                line.baselineY = currentY + 10;
+                line.underlineY = currentY + 11;
+                line.x = (210 - line.width) / 2; 
                 
-                if (index === 0 && titleLines.length === 2) {
-                    currentY = titleLines[index].underlineY + 5; // 5mm gap to top of next line's text
-                }
+                currentY = line.underlineY + 5; 
             });
 
             return { items, titleLines };
@@ -443,41 +458,39 @@
             const data = getFormData();
             const layout = calculateLayout(data);
             const container = document.getElementById('previewContent');
-            container.innerHTML = ''; // Clear previous
+            container.innerHTML = '';
 
-            // Render Title
             layout.titleLines.forEach(line => {
                 const el = document.createElement('div');
                 el.className = 'pdf-text text-title';
                 el.textContent = line.text;
                 el.style.left = line.x + 'mm';
                 el.style.top = line.topY + 'mm';
-                el.style.width = line.width + 'mm';
-                el.style.letterSpacing = '1mm';
-                el.style.wordSpacing = '5mm';
                 container.appendChild(el);
             });
 
-            // Render Details
             layout.items.forEach(item => {
                 const el = document.createElement('div');
                 el.className = `pdf-text ${item.id === 'name' ? 'text-name' : 'text-detail'}`;
                 el.textContent = item.text;
                 el.style.left = item.x + 'mm';
                 el.style.top = item.topY + 'mm';
-                el.style.width = item.width + 'mm';
-                el.style.letterSpacing = '1mm';
-                el.style.wordSpacing = '3mm';
                 container.appendChild(el);
             });
         }
 
-        function generatePDF() {
+        async function generatePDF() {
+            if (!fontReady) {
+                document.getElementById('downloadBtn').innerText = 'Loading Font...';
+                while (!fontReady) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+            }
+
             const btn = document.getElementById('downloadBtn');
             btn.disabled = true;
             btn.innerHTML = 'Generating...';
 
-            // Use setTimeout to allow UI to update before heavy PDF generation
             setTimeout(() => {
                 const data = getFormData();
                 const layout = calculateLayout(data);
@@ -486,29 +499,24 @@
                 doc.setFont(activeFontName, 'normal');
                 doc.setTextColor(0, 0, 0);
 
-                // 1. Draw Page Border (12mm from all edges) - THICKER BORDER
                 doc.setLineWidth(0.8);
                 doc.rect(12, 12, 186, 273);
 
-                // 2. Draw Title
                 layout.titleLines.forEach(line => {
                     drawSpacedText(doc, line.text, line.x, line.baselineY, 10 * 2.83465, 1, 5);
-                    doc.setLineWidth(0.5); // THICKER UNDERLINE
+                    doc.setLineWidth(0.5);
                     doc.line(line.x, line.underlineY, line.x + line.width, line.underlineY);
                 });
 
-                // 3. Draw Details
                 layout.items.forEach(item => {
-                    drawSpacedText(doc, item.text, item.x, item.baselineY, item.fontSize, item.charSpace, item.wordSpace);
-                    doc.setLineWidth(0.5); // THICKER UNDERLINE
+                    drawSpacedText(doc, item.text, item.x, item.baselineY, item.fontSize, 1, 3);
+                    doc.setLineWidth(0.5);
                     doc.line(item.x, item.underlineY, item.x + item.width, item.underlineY);
                 });
 
-                // Save
                 const safeName = data.name.replace(/[^a-zA-Z0-9]/g, '_') || 'CoverPage';
                 doc.save(`${safeName}_CoverPage.pdf`);
 
-                // Reset button
                 btn.disabled = false;
                 btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Download PDF`;
             }, 100);
