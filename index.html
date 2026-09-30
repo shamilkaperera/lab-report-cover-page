@@ -3,12 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A4 Cover Page Generator - Simplex CAD Font</title>
+    <title>A4 Cover Page Generator - Helvetica Thin</title>
+    <!-- jsPDF CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
+        /* LOAD FONT DIRECTLY FROM YOUR GITHUB REPOSITORY */
         @font-face {
-            font-family: 'Simplex';
-            src: url('./Simplex.ttf') format('truetype');
+            font-family: 'HelveticaThin';
+            src: url('./Helvetica-Thin.ttf') format('truetype');
             font-weight: normal;
             font-style: normal;
         }
@@ -19,9 +21,6 @@
             --border-color: #d1d5db;
             --primary: #2563eb;
             --primary-hover: #1d4ed8;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --error: #ef4444;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -162,13 +161,15 @@
             pointer-events: none;
         }
 
+        /* UPDATED: Use Thin Font Stack for Preview */
         .pdf-text {
             position: absolute;
             white-space: pre;
-            font-family: 'Simplex', 'Courier New', Courier, monospace;
+            /* Uses Helvetica Thin/Light if available, falls back to standard sans-serif */
+            font-family: 'HelveticaThin', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-weight: 300; /* 300 is Light/Thin. Use 100 for Ultra-Thin */
             color: #000;
             line-height: 1;
-            font-weight: 600;
         }
 
         .pdf-text::after {
@@ -186,7 +187,7 @@
         .text-detail { font-size: 4mm; }
         .text-detail::after { bottom: -1mm; }
 
-        .text-title { font-size: 10mm; font-weight: 600; }
+        .text-title { font-size: 10mm; }
         .text-title::after { bottom: -1mm; }
 
     </style>
@@ -201,7 +202,7 @@
 
         <!-- Font Status Indicator -->
         <div id="fontStatus" class="font-status loading">
-            <span>⏳</span> Loading Simplex font...
+            <span>⏳</span> Loading Helvetica-Thin font...
         </div>
 
         <form id="coverForm">
@@ -249,39 +250,33 @@
         const { jsPDF } = window.jspdf;
 
         // =====================================================================
-        // FONT LOADING WITH BETTER ERROR HANDLING
+        // FONT LOADING (Updated for Helvetica-Thin)
         // =====================================================================
-        let activeFontName = 'helvetica';
+        let activeFontName = 'helvetica'; // Fallback
         let fontReady = false;
-        let fontLoadMethod = '';
 
         function updateFontStatus(status, message) {
             const statusEl = document.getElementById('fontStatus');
             statusEl.className = `font-status ${status}`;
-            const icons = { loading: '⏳', success: '✓', error: '✗' };
+            const icons = { loading: '', success: '✓', error: '✗' };
             statusEl.innerHTML = `<span>${icons[status]}</span> ${message}`;
         }
 
         async function loadCustomFont() {
             try {
-                console.log('Attempting to load Simplex.ttf...');
+                console.log('Attempting to load Helvetica-Thin.ttf...');
                 
-                // Try fetching the font file
-                const response = await fetch('./Simplex.ttf', { 
-                    cache: 'no-store' // Prevent caching issues
-                });
+                // Fetch the font file from the same directory
+                const response = await fetch('./Helvetica-Thin.ttf', { cache: 'no-store' });
                 
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: File not found at ./Simplex.ttf`);
+                    throw new Error(`HTTP ${response.status}: File not found at ./Helvetica-Thin.ttf`);
                 }
                 
                 const buffer = await response.arrayBuffer();
-                
-                // Verify it's a valid font file (TTF files start with specific bytes)
                 const bytes = new Uint8Array(buffer);
-                if (bytes.length < 4) {
-                    throw new Error('File is too small to be a valid font');
-                }
+                
+                if (bytes.length < 4) throw new Error('File is too small to be a valid font');
                 
                 // Convert to Base64
                 let binary = '';
@@ -292,20 +287,18 @@
 
                 // Add to jsPDF
                 const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-                doc.addFileToVFS('Simplex.ttf', base64);
-                doc.addFont('Simplex.ttf', 'Simplex', 'normal');
+                doc.addFileToVFS('Helvetica-Thin.ttf', base64);
+                doc.addFont('Helvetica-Thin.ttf', 'HelveticaThin', 'normal');
                 
-                activeFontName = 'Simplex';
+                activeFontName = 'HelveticaThin';
                 fontReady = true;
-                fontLoadMethod = 'File';
-                updateFontStatus('success', `Simplex font loaded from file (${(bytes.length / 1024).toFixed(1)} KB)`);
-                console.log('✓ Simplex font loaded successfully from Simplex.ttf');
+                updateFontStatus('success', `Helvetica-Thin loaded (${(bytes.length / 1024).toFixed(1)} KB)`);
+                console.log('✓ Helvetica-Thin font loaded successfully');
                 
             } catch (error) {
                 console.error('Font loading error:', error);
-                updateFontStatus('error', `Font file not found. Using fallback. Check: ${error.message}`);
+                updateFontStatus('error', `Font file not found. Using standard Helvetica. Check: ${error.message}`);
                 fontReady = true;
-                fontLoadMethod = 'Fallback';
             }
         }
 
