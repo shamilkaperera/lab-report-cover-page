@@ -7,9 +7,10 @@
     <!-- jsPDF CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
+        /* LOAD FONT DIRECTLY FROM YOUR GITHUB REPOSITORY */
         @font-face {
             font-family: 'Simplex';
-            src: url('Simplex.ttf') format('truetype');
+            src: url('./Simplex.ttf') format('truetype');
             font-weight: normal;
             font-style: normal;
         }
@@ -227,22 +228,44 @@
     <script>
         const { jsPDF } = window.jspdf;
 
-        // FONT CONFIGURATION - Replace with your actual Simplex.ttf Base64
-        const SIMPLEX_FONT_BASE64 = "AAEAAAARAQAABAAQR0RFRgAAAAAAAAA...";
-        
+        // =====================================================================
+        // DYNAMIC FONT LOADING FROM GITHUB
+        // =====================================================================
         let activeFontName = 'helvetica';
+        let fontReady = false;
 
-        try {
-            if (SIMPLEX_FONT_BASE64.length > 1000) {
+        async function loadCustomFont() {
+            try {
+                // Fetch the font file from the same directory on your GitHub Pages
+                const response = await fetch('./Simplex.ttf');
+                if (!response.ok) throw new Error('Font file not found');
+                
+                const buffer = await response.arrayBuffer();
+                
+                // Convert ArrayBuffer to Base64 string for jsPDF
+                const bytes = new Uint8Array(buffer);
+                let binary = '';
+                for (let i = 0; i < bytes.byteLength; i++) {
+                    binary += String.fromCharCode(bytes[i]);
+                }
+                const base64 = btoa(binary);
+
+                // Add to jsPDF Virtual File System
                 const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-                doc.addFileToVFS('Simplex.ttf', SIMPLEX_FONT_BASE64);
+                doc.addFileToVFS('Simplex.ttf', base64);
                 doc.addFont('Simplex.ttf', 'Simplex', 'normal');
+                
                 activeFontName = 'Simplex';
-                console.log("✓ Simplex font loaded");
+                fontReady = true;
+                console.log("✓ Simplex font loaded successfully from GitHub");
+            } catch (error) {
+                console.warn("⚠ Could not load Simplex.ttf. Make sure it's in the same folder. Using fallback.", error);
+                fontReady = true; // Prevent infinite loading
             }
-        } catch (e) {
-            console.warn("Font not loaded. Using fallback.", e);
         }
+
+        // Start loading font immediately
+        loadCustomFont();
 
         const inputs = {
             title: document.getElementById('title'),
@@ -263,7 +286,6 @@
 
         function getFormData() {
             return {
-                // Keep newlines intact for title
                 title: inputs.title.value.toUpperCase() || 'TITLE OF EXPERIMENT',
                 name: inputs.name.value.trim().toUpperCase(),
                 eNumber: inputs.eNumber.value.trim().toUpperCase(),
@@ -356,7 +378,6 @@
             // 4. Title Block (Centered Horizontally, Split by Enter)
             const titleFontSize = 10 * ptPerMm;
             
-            // Split title by newline (Enter key)
             const rawTitleLines = data.title.split('\n').map(l => l.trim()).filter(l => l !== '');
             const titleLines = [];
             let maxTitleWidth = 0;
@@ -367,7 +388,6 @@
                 if (lineWidth > maxTitleWidth) maxTitleWidth = lineWidth;
             });
 
-            // Fallback if empty
             if (titleLines.length === 0) {
                 const fallbackWidth = getSpacedTextWidth(doc, 'TITLE OF EXPERIMENT', titleFontSize, 1, 5);
                 titleLines.push({ text: 'TITLE OF EXPERIMENT', width: fallbackWidth });
@@ -376,7 +396,6 @@
 
             const titleBlockHeight = titleLines.length === 1 ? (10 + 1) : (10 + 1 + 5 + 10 + 1);
             
-            // Vertically center between top border (12mm) and targetTopY
             const midY = (12 + targetTopY) / 2;
             const titleBlockTopY = midY - (titleBlockHeight / 2);
 
@@ -385,11 +404,10 @@
                 line.topY = currentY;
                 line.baselineY = currentY + 10;
                 line.underlineY = currentY + 10 + 1;
-                // PERFECTLY CENTERED HORIZONTALLY ON THE 210mm PAGE
                 line.x = (210 - line.width) / 2; 
                 
                 if (index === 0 && titleLines.length === 2) {
-                    currentY = line.underlineY + 5; // 5mm gap to top of next line's text
+                    currentY = line.underlineY + 5;
                 }
             });
 
@@ -421,7 +439,15 @@
             });
         }
 
-        function generatePDF() {
+        async function generatePDF() {
+            // Wait for font to finish loading from GitHub before generating
+            if (!fontReady) {
+                document.getElementById('downloadBtn').innerText = 'Loading Font...';
+                while (!fontReady) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+            }
+
             const btn = document.getElementById('downloadBtn');
             btn.disabled = true;
             btn.innerHTML = 'Generating...';
