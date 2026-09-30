@@ -168,14 +168,15 @@
             background-color: #000;
         }
 
+        /* EXACT MEASUREMENTS */
         .text-name { font-size: 5mm !important; }
-        .text-name::after { bottom: -1mm; }
+        .text-name::after { bottom: -1mm; } /* Underline 1mm below baseline */
         
         .text-detail { font-size: 4mm !important; }
-        .text-detail::after { bottom: -1mm; }
+        .text-detail::after { bottom: -1mm; } /* Underline 1mm below baseline */
 
         .text-title { font-size: 10mm !important; }
-        .text-title::after { bottom: -1mm; }
+        .text-title::after { bottom: -1mm; } /* Underline 1mm below baseline */
 
     </style>
 </head>
@@ -335,9 +336,7 @@
             };
         }
 
-        // FIXED: Calculate width with exact spacing
-        // charSpaceMM: distance between letters WITHIN a word (1mm)
-        // wordSpaceMM: distance BETWEEN words (3mm or 5mm)
+        // Calculate width with exact spacing
         function getSpacedTextWidth(doc, text, fontSize, charSpaceMM, wordSpaceMM) {
             doc.setFontSize(fontSize);
             doc.setCharSpace(charSpaceMM);
@@ -346,10 +345,7 @@
             let totalWidth = 0;
             
             for (let i = 0; i < words.length; i++) {
-                // Add width of this word (includes charSpace between letters)
                 totalWidth += doc.getTextWidth(words[i]);
-                
-                // Add word gap AFTER this word (if not the last word)
                 if (i < words.length - 1) {
                     totalWidth += wordSpaceMM;
                 }
@@ -359,7 +355,7 @@
             return totalWidth;
         }
 
-        // FIXED: Draw text with exact spacing
+        // Draw text with exact spacing
         function drawSpacedText(doc, text, startX, baselineY, fontSize, charSpaceMM, wordSpaceMM) {
             doc.setFontSize(fontSize);
             doc.setCharSpace(charSpaceMM);
@@ -368,13 +364,8 @@
             let currentX = startX;
             
             for (let i = 0; i < words.length; i++) {
-                // Draw this word
                 doc.text(words[i], currentX, baselineY);
-                
-                // Move cursor: word width + exact word gap
                 currentX += doc.getTextWidth(words[i]);
-                
-                // Add word gap if not the last word
                 if (i < words.length - 1) {
                     currentX += wordSpaceMM;
                 }
@@ -398,14 +389,13 @@
             if (data.semester) items.push({ id: 'semester', text: data.semester, height: 4, fontSize: 4 * ptPerMm, charSpace: 1, wordSpace: 3 });
             if (data.date) items.push({ id: 'date', text: data.date, height: 4, fontSize: 4 * ptPerMm, charSpace: 1, wordSpace: 3 });
 
-            // 2. Find the LONGEST line (could be date!) - this determines startX for ALL lines
+            // 2. Find the LONGEST line
             let maxWidth = 0;
             items.forEach(item => {
                 item.width = getSpacedTextWidth(doc, item.text, item.fontSize, item.charSpace, item.wordSpace);
                 if (item.width > maxWidth) maxWidth = item.width;
             });
 
-            // Right border at 198mm, longest line ends 10mm before = 188mm
             const rightBorderX = 198;
             const endX = rightBorderX - 10;
             const startX = endX - maxWidth;
@@ -415,21 +405,21 @@
                 for (let i = items.length - 1; i >= 0; i--) {
                     const item = items[i];
                     if (i === items.length - 1) {
-                        item.underlineY = 270;
+                        item.underlineY = 270; // 15mm above bottom border
                     } else {
                         const nextItem = items[i + 1];
                         item.underlineY = (nextItem.baselineY - nextItem.height) - 3;
                     }
-                    item.baselineY = item.underlineY - 1;
+                    item.baselineY = item.underlineY - 1; // Underline 1mm below baseline
                     item.topY = item.baselineY - item.height;
-                    item.x = startX; // All lines start at same X (left-aligned)
+                    item.x = startX;
                 }
             }
 
             const targetTopY = items.length > 0 ? items[0].topY : 250;
 
-            // 4. Title Block (charSpace: 1mm, wordSpace: 5mm)
-            const titleFontSize = 10 * ptPerMm;
+            // 4. Title Block - EXACTLY 10mm HEIGHT
+            const titleFontSize = 10 * ptPerMm; // 28.35pt = 10mm
             
             const rawTitleLines = data.title.split('\n').map(l => l.trim()).filter(l => l !== '');
             const titleLines = [];
@@ -453,11 +443,11 @@
             let currentY = titleBlockTopY;
             titleLines.forEach((line, index) => {
                 line.topY = currentY;
-                line.baselineY = currentY + 10;
-                line.underlineY = currentY + 11;
+                line.baselineY = currentY + 10; // 10mm text height
+                line.underlineY = currentY + 11; // Underline 1mm below baseline
                 line.x = (210 - line.width) / 2; // Centered horizontally
                 
-                currentY = line.underlineY + 5;
+                currentY = line.underlineY + 5; // 5mm gap to next line
             });
 
             return { items, titleLines };
@@ -511,14 +501,14 @@
                 doc.setLineWidth(0.8);
                 doc.rect(12, 12, 186, 273);
 
-                // Title (charSpace: 1mm, wordSpace: 5mm)
+                // Title - 10mm height, underline 1mm below
                 layout.titleLines.forEach(line => {
                     drawSpacedText(doc, line.text, line.x, line.baselineY, 10 * 2.83465, 1, 5);
                     doc.setLineWidth(0.5);
                     doc.line(line.x, line.underlineY, line.x + line.width, line.underlineY);
                 });
 
-                // Details (charSpace: 1mm, wordSpace: 3mm)
+                // Details - underline 1mm below each text
                 layout.items.forEach(item => {
                     drawSpacedText(doc, item.text, item.x, item.baselineY, item.fontSize, 1, 3);
                     doc.setLineWidth(0.5);
