@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>A4 Cover Page Generator - Simplex CAD Font</title>
-    <!-- jsPDF CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         @font-face {
@@ -51,14 +50,21 @@
 
         .input-group { display: flex; flex-direction: column; gap: 6px; }
         .input-group label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #4b5563; }
-        .input-group input {
+        .input-group input,
+        .input-group textarea {
             padding: 10px 12px;
             border: 1px solid var(--border-color);
             border-radius: 6px;
             font-size: 0.95rem;
             transition: border-color 0.2s, box-shadow 0.2s;
+            font-family: inherit;
+            resize: vertical;
         }
-        .input-group input:focus {
+        .input-group textarea {
+            min-height: 80px;
+        }
+        .input-group input:focus,
+        .input-group textarea:focus {
             outline: none;
             border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
@@ -165,6 +171,12 @@
         .text-title { font-size: 10mm; font-weight: 600; }
         .text-title::after { bottom: -1mm; }
 
+        .helper-text {
+            font-size: 0.7rem;
+            color: #9ca3af;
+            margin-top: 4px;
+        }
+
     </style>
 </head>
 <body>
@@ -178,7 +190,8 @@
         <form id="coverForm">
             <div class="input-group">
                 <label for="title">Title of Experiment *</label>
-                <input type="text" id="title" placeholder="e.g., MECHANICS OF VIBRATIONS" required>
+                <textarea id="title" placeholder="MECHANICS&#10;OF VIBRATIONS" required></textarea>
+                <p class="helper-text">Press Enter to create new lines. Each line will be centered.</p>
             </div>
             <div class="input-group">
                 <label for="name">Name</label>
@@ -255,7 +268,8 @@
 
         function getFormData() {
             return {
-                title: inputs.title.value.trim().toUpperCase() || 'TITLE OF EXPERIMENT',
+                // Split title by newlines (user controls line breaks with Enter)
+                titleLines: inputs.title.value.trim().toUpperCase().split('\n').filter(line => line.trim() !== ''),
                 name: inputs.name.value.trim().toUpperCase(),
                 eNumber: inputs.eNumber.value.trim().toUpperCase(),
                 group: inputs.group.value.trim().toUpperCase(),
@@ -264,13 +278,7 @@
             };
         }
 
-        // =====================================================================
-        // PRECISE SPACING FUNCTIONS
-        // =====================================================================
-        
-        // Calculate width of text with EXACT spacing:
-        // - charSpaceMM: distance between letters WITHIN a word
-        // - wordSpaceMM: distance BETWEEN words (gap after previous word ends)
+        // Calculate width of text with EXACT spacing
         function getSpacedTextWidth(doc, text, fontSize, charSpaceMM, wordSpaceMM) {
             doc.setFontSize(fontSize);
             doc.setCharSpace(charSpaceMM);
@@ -279,10 +287,7 @@
             let totalWidth = 0;
             
             for (let i = 0; i < words.length; i++) {
-                // Add width of this word (includes charSpace between letters)
                 totalWidth += doc.getTextWidth(words[i]);
-                
-                // Add word gap AFTER this word (if not the last word)
                 if (i < words.length - 1) {
                     totalWidth += wordSpaceMM;
                 }
@@ -292,7 +297,7 @@
             return totalWidth;
         }
 
-        // Draw text with EXACT spacing and return the end X position
+        // Draw text with EXACT spacing
         function drawSpacedText(doc, text, startX, baselineY, fontSize, charSpaceMM, wordSpaceMM) {
             doc.setFontSize(fontSize);
             doc.setCharSpace(charSpaceMM);
@@ -301,13 +306,8 @@
             let currentX = startX;
             
             for (let i = 0; i < words.length; i++) {
-                // Draw this word
                 doc.text(words[i], currentX, baselineY);
-                
-                // Move cursor: word width + exact word gap
                 currentX += doc.getTextWidth(words[i]);
-                
-                // Add word gap if not the last word
                 if (i < words.length - 1) {
                     currentX += wordSpaceMM;
                 }
@@ -315,37 +315,6 @@
             
             doc.setCharSpace(0);
             return currentX;
-        }
-
-        // Wrap title at word boundaries (never split a word)
-        function wrapTitleText(doc, text, fontSize, charSpaceMM, wordSpaceMM, maxWidth) {
-            const words = text.split(' ');
-            const lines = [];
-            let currentLine = [];
-            let currentWidth = 0;
-
-            for (let i = 0; i < words.length; i++) {
-                const word = words[i];
-                const wordWidth = getSpacedTextWidth(doc, word, fontSize, charSpaceMM, wordSpaceMM);
-                const spaceNeeded = currentLine.length > 0 ? wordSpaceMM : 0;
-                
-                if (currentWidth + spaceNeeded + wordWidth <= maxWidth) {
-                    currentLine.push(word);
-                    currentWidth += spaceNeeded + wordWidth;
-                } else {
-                    if (currentLine.length > 0) {
-                        lines.push(currentLine.join(' '));
-                    }
-                    currentLine = [word];
-                    currentWidth = wordWidth;
-                }
-            }
-            
-            if (currentLine.length > 0) {
-                lines.push(currentLine.join(' '));
-            }
-
-            return lines.slice(0, 2);
         }
 
         function calculateLayout(data) {
@@ -362,14 +331,13 @@
             if (data.semester) items.push({ id: 'semester', text: data.semester, height: 4, fontSize: 4 * ptPerMm, charSpace: 1, wordSpace: 3 });
             if (data.date) items.push({ id: 'date', text: data.date, height: 4, fontSize: 4 * ptPerMm, charSpace: 1, wordSpace: 3 });
 
-            // 2. Find the LONGEST line - this determines startX for ALL lines
+            // 2. Find the LONGEST line for right-block alignment
             let maxWidth = 0;
             items.forEach(item => {
                 item.width = getSpacedTextWidth(doc, item.text, item.fontSize, item.charSpace, item.wordSpace);
                 if (item.width > maxWidth) maxWidth = item.width;
             });
 
-            // Right border at 198mm, longest line ends 10mm before = 188mm
             const rightBorderX = 198;
             const endX = rightBorderX - 10;
             const startX = endX - maxWidth;
@@ -392,38 +360,38 @@
 
             const targetTopY = items.length > 0 ? items[0].topY : 250;
 
-            // 4. Title Block
+            // 4. Title Block - HORIZONTALLY CENTERED
             const titleFontSize = 10 * ptPerMm;
-            const titleStartX = 37;
-            const rightPageBorder = 198;
-            const titleMaxEndX = rightPageBorder - 25;
-            const titleMaxWidth = titleMaxEndX - titleStartX;
-
-            const titleLines = wrapTitleText(doc, data.title, titleFontSize, 1, 5, titleMaxWidth);
-
-            const titleBlockHeight = titleLines.length === 1 ? (10 + 1) : (10 + 1 + 5 + 10 + 1);
+            const pageCenterX = 105; // Center of 210mm A4 page
             
+            // Process each line user entered (split by Enter)
+            const titleLines = data.titleLines.length > 0 ? data.titleLines : ['TITLE OF EXPERIMENT'];
+            
+            const titleBlockHeight = titleLines.length === 1 ? (10 + 1) : (titleLines.length * (10 + 1) + (titleLines.length - 1) * 5);
+            
+            // Vertically center between top border (12mm) and targetTopY
             const midY = (12 + targetTopY) / 2;
             const titleBlockTopY = midY - (titleBlockHeight / 2);
 
             let currentY = titleBlockTopY;
-            titleLines.forEach((lineText, index) => {
+            const processedTitleLines = titleLines.map((lineText, index) => {
                 const lineWidth = getSpacedTextWidth(doc, lineText, titleFontSize, 1, 5);
-                titleLines[index] = {
+                const lineX = pageCenterX - (lineWidth / 2); // Center each line
+                
+                const lineData = {
                     text: lineText,
                     width: lineWidth,
                     topY: currentY,
                     baselineY: currentY + 10,
                     underlineY: currentY + 10 + 1,
-                    x: titleStartX
+                    x: lineX // Horizontally centered
                 };
                 
-                if (index === 0 && titleLines.length === 2) {
-                    currentY = titleLines[index].underlineY + 5;
-                }
+                currentY = lineData.underlineY + 5; // 5mm gap to next line
+                return lineData;
             });
 
-            return { items, titleLines };
+            return { items, titleLines: processedTitleLines };
         }
 
         function updatePreview() {
@@ -468,9 +436,9 @@
                 doc.setLineWidth(0.8);
                 doc.rect(12, 12, 186, 273);
 
-                // Title (charSpace: 1mm, wordSpace: 5mm)
+                // Title (charSpace: 1mm, wordSpace: 5mm) - HORIZONTALLY CENTERED
                 layout.titleLines.forEach(line => {
-                    drawSpacedText(doc, line.text, line.x, line.baselineY, 10 * ptPerMm, 1, 5);
+                    drawSpacedText(doc, line.text, line.x, line.baselineY, 10 * 2.83465, 1, 5);
                     doc.setLineWidth(0.5);
                     doc.line(line.x, line.underlineY, line.x + line.width, line.underlineY);
                 });
@@ -479,7 +447,7 @@
                 layout.items.forEach(item => {
                     drawSpacedText(doc, item.text, item.x, item.baselineY, item.fontSize, 1, 3);
                     doc.setLineWidth(0.5);
-                    doc.line(item.x, item.underlineY, item.x + item.width, item.underlineY);
+                    doc.line(item.x, item.underlineY, item.x + item.width, line.underlineY);
                 });
 
                 const safeName = data.name.replace(/[^a-zA-Z0-9]/g, '_') || 'CoverPage';
