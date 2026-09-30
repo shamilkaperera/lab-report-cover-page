@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A4 Cover Page Generator - Helvetica Thin</title>
+    <title>A4 Cover Page Generator - Simplex Font</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root {
@@ -151,11 +151,11 @@
             pointer-events: none;
         }
 
-        /* Font will be applied via JavaScript data URI */
+        /* Simplex font applied via JavaScript data URI */
         .pdf-text {
             position: absolute;
             white-space: pre;
-            font-family: 'UploadedFont' !important;
+            font-family: 'Simplex' !important;
             color: #000;
             line-height: 1;
         }
@@ -189,7 +189,7 @@
         </div>
 
         <div id="fontStatus" class="font-status loading">
-            <span>⏳</span> Loading Helvetica-Thin font...
+            <span>⏳</span> Loading Simplex font...
         </div>
 
         <form id="coverForm">
@@ -238,7 +238,6 @@
 
         let activeFontName = 'helvetica';
         let fontReady = false;
-        let fontBase64 = '';
 
         function updateFontStatus(status, message) {
             const statusEl = document.getElementById('fontStatus');
@@ -248,12 +247,12 @@
             statusEl.innerHTML = `<span>${icons[status]}</span> ${message}`;
         }
 
-        // INJECT FONT INTO BROWSER VIA DATA URI
+        // INJECT SIMPLEX FONT INTO BROWSER VIA DATA URI
         function injectFontAsDataURI(base64) {
             const style = document.createElement('style');
             style.textContent = `
                 @font-face {
-                    font-family: 'UploadedFont';
+                    font-family: 'Simplex';
                     src: url('data:font/truetype;base64,${base64}') format('truetype');
                     font-weight: normal;
                     font-style: normal;
@@ -261,14 +260,14 @@
                 }
             `;
             document.head.appendChild(style);
-            console.log('✓ Font injected as data URI into browser CSS');
+            console.log('✓ Simplex font injected as data URI into browser CSS');
         }
 
         async function loadCustomFont() {
             try {
-                console.log('Attempting to load Helvetica-Thin.ttf...');
+                console.log('Attempting to load Simplex.ttf...');
                 
-                const response = await fetch('./Helvetica-Thin.ttf?v=' + Date.now(), { 
+                const response = await fetch('./Simplex.ttf?v=' + Date.now(), { 
                     cache: 'no-store' 
                 });
                 
@@ -287,21 +286,20 @@
                     binary += String.fromCharCode(bytes[i]);
                 }
                 const base64 = btoa(binary);
-                fontBase64 = base64;
 
                 // 1. INJECT INTO BROWSER CSS (for preview)
                 injectFontAsDataURI(base64);
 
                 // 2. INJECT INTO JSPDF (for PDF download)
                 const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-                doc.addFileToVFS('Helvetica-Thin.ttf', base64);
-                doc.addFont('Helvetica-Thin.ttf', 'UploadedFont', 'normal');
+                doc.addFileToVFS('Simplex.ttf', base64);
+                doc.addFont('Simplex.ttf', 'Simplex', 'normal');
                 
-                activeFontName = 'UploadedFont';
+                activeFontName = 'Simplex';
                 fontReady = true;
                 
-                updateFontStatus('success', `Helvetica-Thin loaded (${(bytes.length / 1024).toFixed(1)} KB) - Preview & PDF ready!`);
-                console.log('✓ Font loaded for both preview and PDF');
+                updateFontStatus('success', `Simplex font loaded (${(bytes.length / 1024).toFixed(1)} KB) - Preview & PDF ready!`);
+                console.log('✓ Simplex font loaded for both preview and PDF');
                 
                 // Refresh preview to show new font
                 updatePreview();
