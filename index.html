@@ -143,16 +143,17 @@
             left: 12mm;
             width: 186mm;
             height: 273mm;
-            border: 1.5px solid #000;
+            border: 2px solid #000;
             pointer-events: none;
         }
 
         .pdf-text {
             position: absolute;
             white-space: nowrap;
-            font-family: 'Simplex', 'Courier New', Courier, monospace;
+            font-family: 'Simplex', 'Arial', 'Helvetica', sans-serif;
             color: #000;
             line-height: 1;
+            font-weight: 600; /* THICKER FONT FOR PREVIEW */
         }
 
         .pdf-text::after {
@@ -160,7 +161,7 @@
             position: absolute;
             left: 0;
             width: 100%;
-            height: 0.5px;
+            height: 1px; /* THICKER UNDERLINE */
             background-color: #000;
         }
 
@@ -170,7 +171,7 @@
         .text-detail { font-size: 4mm; }
         .text-detail::after { bottom: -1mm; }
 
-        .text-title { font-size: 10mm; font-weight: normal; }
+        .text-title { font-size: 10mm; font-weight: 600; } /* THICKER TITLE */
         .text-title::after { bottom: -1mm; }
 
     </style>
@@ -234,12 +235,11 @@
         // =====================================================================
         // FONT CONFIGURATION
         // Replace the string below with the actual Base64 encoded content of Simplex.ttf
-        // You can generate this by reading the file in JS or using an online base64 converter.
         // =====================================================================
         const SIMPLEX_FONT_BASE64 = "AAEAAAARAQAABAAQR0RFRgAAAAAAAAA..."; // <-- REPLACE WITH ACTUAL BASE64
         
         let fontLoaded = false;
-        let activeFontName = 'helvetica'; // Fallback
+        let activeFontName = 'helvetica';
 
         // Attempt to register the custom font
         try {
@@ -251,7 +251,7 @@
                 fontLoaded = true;
                 console.log("✓ Simplex font loaded successfully");
             } else {
-                console.warn("⚠ Simplex font base64 not provided. Using fallback font.");
+                console.warn(" Simplex font base64 not provided. Using fallback font.");
             }
         } catch (e) {
             console.warn("Custom font not loaded. Using fallback.", e);
@@ -320,7 +320,7 @@
         }
 
         // Helper: Wrap title text at word boundaries without splitting words
-        function wrapTitleText(doc, text, fontSize, charSpaceMM, wordSpaceMM, maxWidth, startX) {
+        function wrapTitleText(doc, text, fontSize, charSpaceMM, wordSpaceMM, maxWidth) {
             const words = text.split(' ');
             const lines = [];
             let currentLine = [];
@@ -331,10 +331,12 @@
                 const wordWidth = getSpacedTextWidth(doc, word, fontSize, charSpaceMM, wordSpaceMM);
                 const spaceNeeded = currentLine.length > 0 ? wordSpaceMM : 0;
                 
+                // Check if adding this word would exceed max width
                 if (currentWidth + spaceNeeded + wordWidth <= maxWidth) {
                     currentLine.push(word);
                     currentWidth += spaceNeeded + wordWidth;
                 } else {
+                    // Save current line and start new one
                     if (currentLine.length > 0) {
                         lines.push(currentLine.join(' '));
                     }
@@ -343,6 +345,7 @@
                 }
             }
             
+            // Don't forget the last line
             if (currentLine.length > 0) {
                 lines.push(currentLine.join(' '));
             }
@@ -367,14 +370,19 @@
             if (data.date) items.push({ id: 'date', text: data.date, height: 4, fontSize: 4 * ptPerMm, charSpace: 1, wordSpace: 3 });
 
             // 2. Calculate X-Axis (Right Alignment Logic)
+            // Find the LONGEST line - this determines where ALL lines start
             let maxWidth = 0;
             items.forEach(item => {
                 item.width = getSpacedTextWidth(doc, item.text, item.fontSize, item.charSpace, item.wordSpace);
                 if (item.width > maxWidth) maxWidth = item.width;
             });
 
-            // Right page border is at 198mm. 10mm to the left = 188mm.
-            const startX = 188 - maxWidth;
+            // Right page border is at 198mm (210mm - 12mm margin)
+            // Longest line must end 10mm to the left of right border = 188mm
+            // So startX = 188mm - maxWidth
+            const rightBorderX = 198;
+            const endX = rightBorderX - 10; // 188mm
+            const startX = endX - maxWidth;
 
             // 3. Calculate Y-Axis (Bottom-Up Anchoring)
             if (items.length > 0) {
@@ -389,7 +397,7 @@
                     }
                     item.baselineY = item.underlineY - 1; // Underline is 1mm below baseline
                     item.topY = item.baselineY - item.height;
-                    item.x = startX;
+                    item.x = startX; // All lines start at same X (left-aligned)
                 }
             }
 
@@ -398,9 +406,12 @@
             // 4. Title Block Calculation
             const titleFontSize = 10 * ptPerMm; // 28.35 pt
             const titleStartX = 37; // 25mm from left border (12mm + 25mm)
-            const titleMaxWidth = 148; // Cannot go past 185mm (198mm - 25mm from right border), so 185 - 37 = 148mm
+            const rightPageBorder = 198;
+            const titleMaxEndX = rightPageBorder - 25; // 173mm (25mm from right border)
+            const titleMaxWidth = titleMaxEndX - titleStartX; // 173 - 37 = 136mm
 
-            const titleLines = wrapTitleText(doc, data.title, titleFontSize, 1, 5, titleMaxWidth, titleStartX);
+            // Wrap title text if it exceeds max width
+            const titleLines = wrapTitleText(doc, data.title, titleFontSize, 1, 5, titleMaxWidth);
 
             const titleBlockHeight = titleLines.length === 1 ? (10 + 1) : (10 + 1 + 5 + 10 + 1); // 11mm or 27mm
             
@@ -475,21 +486,21 @@
                 doc.setFont(activeFontName, 'normal');
                 doc.setTextColor(0, 0, 0);
 
-                // 1. Draw Page Border (12mm from all edges)
-                doc.setLineWidth(0.5);
+                // 1. Draw Page Border (12mm from all edges) - THICKER BORDER
+                doc.setLineWidth(0.8);
                 doc.rect(12, 12, 186, 273);
 
                 // 2. Draw Title
                 layout.titleLines.forEach(line => {
                     drawSpacedText(doc, line.text, line.x, line.baselineY, 10 * 2.83465, 1, 5);
-                    doc.setLineWidth(0.3);
+                    doc.setLineWidth(0.5); // THICKER UNDERLINE
                     doc.line(line.x, line.underlineY, line.x + line.width, line.underlineY);
                 });
 
                 // 3. Draw Details
                 layout.items.forEach(item => {
                     drawSpacedText(doc, item.text, item.x, item.baselineY, item.fontSize, item.charSpace, item.wordSpace);
-                    doc.setLineWidth(0.3);
+                    doc.setLineWidth(0.5); // THICKER UNDERLINE
                     doc.line(item.x, item.underlineY, item.x + item.width, item.underlineY);
                 });
 
