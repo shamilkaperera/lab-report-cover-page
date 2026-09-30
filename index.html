@@ -113,27 +113,27 @@
         <h2>Cover Page Designer</h2>
         <div class="form-group">
             <label>Title (Press Enter for new lines)</label>
-            <textarea id="titleInput" placeholder="ME3020&#10;INSTRUMENTATION"></textarea>
+            <textarea id="titleInput" placeholder="MEXXXX&#10;XXXXXXXXXX"></textarea>
         </div>
         <div class="form-group">
             <label>Name</label>
-            <input type="text" id="nameInput" placeholder="PULLE D.S.C.F.">
+            <input type="text" id="nameInput" placeholder="PERERA D.I.">
         </div>
         <div class="form-group">
             <label>E Number</label>
-            <input type="text" id="eNumInput" placeholder="E/23/281">
+            <input type="text" id="eNumInput" placeholder="E/2X/XXX">
         </div>
         <div class="form-group">
             <label>Group Number</label>
-            <input type="text" id="groupInput" placeholder="GROUP B6">
+            <input type="text" id="groupInput" placeholder="GROUP XX">
         </div>
         <div class="form-group">
             <label>Semester</label>
-            <input type="text" id="semInput" placeholder="SEMESTER CS I">
+            <input type="text" id="semInput" placeholder="SEMESTER XXX">
         </div>
         <div class="form-group">
             <label>Date</label>
-            <input type="text" id="dateInput" placeholder="09/23/2026">
+            <input type="text" id="dateInput" placeholder="XX/XX/2026">
         </div>
         <button id="downloadBtn">Download A4 PDF</button>
     </div>
@@ -148,10 +148,16 @@
 
     <script>
         // =====================================================================
+        // GLOBAL THICKNESS VARIABLE
+        // Change this ONE number to adjust Font, Border, and Underline thickness
+        // Recommended: 0.15 (Ultra-thin CAD), 0.25 (Medium), 0.4 (Thick)
+        // =====================================================================
+        const LINE_THICKNESS = 0.3; 
+
+        // =====================================================================
         // 1. ULTRA-SMOOTH Simplex Vector Font Engine
         // Grid: X from 0 to 8, Y from 0 to 10. Width = Height * 0.8
         // 'I', '1', and '.' take exactly 10% of width (1mm for 10mm height)
-        // Numbers upgraded with ultra-dense coordinate mapping for smooth curves
         // =====================================================================
         const vectorFont = {
             'A': [[[0,10],[4,0],[8,10]], [[2,5],[6,5]]],
@@ -192,7 +198,7 @@
             '9': [[[8,4], [7.5,5], [6.6,5.7], [5.5,6], [4,6], [2.5,5.7], [1.2,5], [0.4,4], [0,2.8], [0.4,1.6], [1.2,0.8], [2.2,0.2], [4,0], [5.8,0.2], [7,1], [7.7,2], [8,3.5], [8,6.5], [7.6,8], [6.8,9], [5.5,9.7], [4,10], [2.5,10], [1.5,9.6], [0.8,9]]],
             '/': [[[1,10],[7,0]]],
             '-': [[[1,5],[7,5]]],
-            '.': [[[3.5,9.5],[4.5,9.5],[4.5,10],[3.5,10],[3.5,9.5]]], // Fallback, handled specially in draw function
+            '.': [[[3.5,9.5],[4.5,9.5],[4.5,10],[3.5,10],[3.5,9.5]]], 
             ',': [[[4,9],[5,9],[5,10],[3,12]]],
             ' ': [] 
         };
@@ -205,7 +211,6 @@
                 if(text[i] === ' ') {
                     w += spaceDist;
                 } else {
-                    // I, 1, and . take exactly 1mm width spacing logically (height * 0.1)
                     let charW = (text[i] === 'I' || text[i] === '1' || text[i] === '.') ? (height * 0.1) : (height * 0.8);
                     w += charW + (i < text.length - 1 && text[i+1] !== ' ' ? 1 : 0); 
                 }
@@ -213,13 +218,14 @@
             return w;
         }
 
-        // Draws the vector text to jsPDF with special filled-circle logic for '.'
+        // Draws the vector text to jsPDF
         function drawCadText(doc, text, startX, startY, height) {
             const spacebarDist = height === 10 ? 5 : 3;
             const letterSpacing = 1; 
             const scale = height / 10; 
             
-            doc.setLineWidth(0.15); 
+            // USE GLOBAL THICKNESS VARIABLE FOR FONT
+            doc.setLineWidth(LINE_THICKNESS); 
             let currentX = startX;
             text = text.toUpperCase();
 
@@ -230,13 +236,10 @@
                     continue;
                 }
                 
-                // I, 1, and . take exactly 1mm width spacing logically
                 let charW = (char === 'I' || char === '1' || char === '.') ? (height * 0.1) : (height * 0.8);
                 
                 if (char === '.') {
-                    // Special rendering logic for a filled circle dot
                     doc.setFillColor(0, 0, 0);
-                    // Radius scaled proportionately (0.35mm radius for a 10mm font height)
                     doc.circle(currentX + (charW / 2), startY + (height * 0.95), height * 0.035, 'F');
                 } else if (vectorFont[char]) {
                     vectorFont[char].forEach(path => {
@@ -264,8 +267,8 @@
             const pageWidth = 210;
             const pageHeight = 297;
 
-            // 1. Page Border (0.5mm for clear visibility)
-            doc.setLineWidth(0.5);
+            // 1. Page Border (Uses Global Thickness Variable)
+            doc.setLineWidth(LINE_THICKNESS);
             doc.rect(borderMarg, borderMarg, pageWidth - (borderMarg*2), pageHeight - (borderMarg*2));
 
             // 2. Bottom-Right Details (skip empty)
@@ -289,18 +292,18 @@
                 });
 
                 // STRICT ALIGNMENT: Longest text ends exactly 15mm to the left of the right border (198mm)
-                // 198 - 15 = 183mm
                 const endX = 198 - 15;
                 const startX = endX - maxWidth;
                 
-                let currentY = 270; // 15mm from bottom border (285mm)
+                let currentY = 270; 
                 
                 for(let i = inputs.length - 1; i >= 0; i--) {
                     const text = inputs[i];
                     const h = heights[i];
                     const w = getCadTextWidth(text, h, 3);
                     
-                    doc.setLineWidth(0.3);
+                    // USE GLOBAL THICKNESS VARIABLE FOR UNDERLINES
+                    doc.setLineWidth(LINE_THICKNESS);
                     doc.line(startX, currentY, startX + w, currentY);
                     
                     const textY = currentY - 1 - h; 
@@ -318,10 +321,9 @@
             const titleText = document.getElementById('titleInput').value.trim();
             if(titleText) {
                 const titleHeight = 10;
-                const maxTitleWidth = pageWidth - 25 - 25; // 160mm
+                const maxTitleWidth = pageWidth - 25 - 25; 
                 
                 let lines = [];
-                // Split correctly mapping to multiline strings
                 let words = titleText.replace(/\n/g, ' \n ').split(' ');
                 let currentLine = "";
 
@@ -349,12 +351,13 @@
                 lines.forEach((line, index) => {
                     const lineW = getCadTextWidth(line, titleHeight, 5);
                     
-                    // STRICT CENTERING: EVERY line is centered horizontally, regardless of line count
+                    // STRICT CENTERING: EVERY line is centered horizontally
                     const lineX = (pageWidth / 2) - (lineW / 2); 
                     
                     drawCadText(doc, line, lineX, startY, titleHeight);
                     
-                    doc.setLineWidth(0.3);
+                    // USE GLOBAL THICKNESS VARIABLE FOR TITLE UNDERLINES
+                    doc.setLineWidth(LINE_THICKNESS);
                     doc.line(lineX, startY + titleHeight + 1, lineX + lineW, startY + titleHeight + 1);
                     startY += titleHeight + 1 + 5;
                 });
