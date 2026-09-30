@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A4 Cover Page Generator (Simplex)</title>
+    <title>A4 Cover Page Generator - Simplex CAD Font</title>
     <!-- jsPDF CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
@@ -141,8 +141,8 @@
             position: absolute;
             top: 12mm;
             left: 12mm;
-            width: 186mm; /* 210 - 24 */
-            height: 273mm; /* 297 - 24 */
+            width: 186mm;
+            height: 273mm;
             border: 1.5px solid #000;
             pointer-events: none;
         }
@@ -150,7 +150,7 @@
         .pdf-text {
             position: absolute;
             white-space: nowrap;
-            font-family: 'Simplex', 'Courier New', Courier, monospace; /* Monospace fallback approximates CAD spacing */
+            font-family: 'Simplex', 'Courier New', Courier, monospace;
             color: #000;
             line-height: 1;
         }
@@ -164,7 +164,6 @@
             background-color: #000;
         }
 
-        /* Specific adjustments to match the 1mm baseline rule visually in CSS */
         .text-name { font-size: 5mm; }
         .text-name::after { bottom: -1mm; }
         
@@ -182,7 +181,7 @@
     <div class="form-panel">
         <div>
             <h2>Cover Page Designer</h2>
-            <p>Fill in the details. Empty fields (except Title) will be automatically skipped in the layout, shifting remaining items up.</p>
+            <p>Fill in the details. Empty fields (except Title) will be automatically skipped in the layout.</p>
         </div>
 
         <form id="coverForm">
@@ -236,7 +235,6 @@
         // FONT CONFIGURATION
         // Replace the string below with the actual Base64 encoded content of Simplex.ttf
         // You can generate this by reading the file in JS or using an online base64 converter.
-        // For now, it falls back to 'helvetica' if this is a dummy string, ensuring the app runs.
         // =====================================================================
         const SIMPLEX_FONT_BASE64 = "AAEAAAARAQAABAAQR0RFRgAAAAAAAAA..."; // <-- REPLACE WITH ACTUAL BASE64
         
@@ -245,13 +243,15 @@
 
         // Attempt to register the custom font
         try {
-            // Check if it looks like a real base64 font string (starts with AAe or similar)
             if (SIMPLEX_FONT_BASE64.length > 1000) {
                 const doc = new jsPDF({ unit: 'mm', format: 'a4' });
                 doc.addFileToVFS('Simplex.ttf', SIMPLEX_FONT_BASE64);
                 doc.addFont('Simplex.ttf', 'Simplex', 'normal');
                 activeFontName = 'Simplex';
                 fontLoaded = true;
+                console.log("✓ Simplex font loaded successfully");
+            } else {
+                console.warn("⚠ Simplex font base64 not provided. Using fallback font.");
             }
         } catch (e) {
             console.warn("Custom font not loaded. Using fallback.", e);
@@ -319,6 +319,38 @@
             return currentX - wordSpaceMM;
         }
 
+        // Helper: Wrap title text at word boundaries without splitting words
+        function wrapTitleText(doc, text, fontSize, charSpaceMM, wordSpaceMM, maxWidth, startX) {
+            const words = text.split(' ');
+            const lines = [];
+            let currentLine = [];
+            let currentWidth = 0;
+
+            for (let i = 0; i < words.length; i++) {
+                const word = words[i];
+                const wordWidth = getSpacedTextWidth(doc, word, fontSize, charSpaceMM, wordSpaceMM);
+                const spaceNeeded = currentLine.length > 0 ? wordSpaceMM : 0;
+                
+                if (currentWidth + spaceNeeded + wordWidth <= maxWidth) {
+                    currentLine.push(word);
+                    currentWidth += spaceNeeded + wordWidth;
+                } else {
+                    if (currentLine.length > 0) {
+                        lines.push(currentLine.join(' '));
+                    }
+                    currentLine = [word];
+                    currentWidth = wordWidth;
+                }
+            }
+            
+            if (currentLine.length > 0) {
+                lines.push(currentLine.join(' '));
+            }
+
+            // Limit to 2 lines max
+            return lines.slice(0, 2);
+        }
+
         function calculateLayout(data) {
             const doc = new jsPDF({ unit: 'mm', format: 'a4' });
             doc.setFont(activeFontName, 'normal');
@@ -365,24 +397,10 @@
 
             // 4. Title Block Calculation
             const titleFontSize = 10 * ptPerMm; // 28.35 pt
-            const titleWidth = getSpacedTextWidth(doc, data.title, titleFontSize, 1, 5);
-            let titleLines = [];
+            const titleStartX = 37; // 25mm from left border (12mm + 25mm)
+            const titleMaxWidth = 148; // Cannot go past 185mm (198mm - 25mm from right border), so 185 - 37 = 148mm
 
-            if (titleWidth <= 160) {
-                titleLines = [{ text: data.title, width: titleWidth }];
-            } else {
-                // Split into exactly two lines at the nearest space to the middle
-                const mid = Math.floor(data.title.length / 2);
-                let splitIndex = data.title.lastIndexOf(' ', mid);
-                if (splitIndex === -1 || splitIndex === 0) splitIndex = mid; 
-                
-                const line1 = data.title.substring(0, splitIndex).trim();
-                const line2 = data.title.substring(splitIndex).trim();
-                titleLines = [
-                    { text: line1, width: getSpacedTextWidth(doc, line1, titleFontSize, 1, 5) },
-                    { text: line2, width: getSpacedTextWidth(doc, line2, titleFontSize, 1, 5) }
-                ];
-            }
+            const titleLines = wrapTitleText(doc, data.title, titleFontSize, 1, 5, titleMaxWidth, titleStartX);
 
             const titleBlockHeight = titleLines.length === 1 ? (10 + 1) : (10 + 1 + 5 + 10 + 1); // 11mm or 27mm
             
@@ -391,15 +409,19 @@
             const titleBlockTopY = midY - (titleBlockHeight / 2);
 
             let currentY = titleBlockTopY;
-            titleLines.forEach((line, index) => {
-                line.topY = currentY;
-                line.baselineY = currentY + 10;
-                line.underlineY = line.baselineY + 1;
-                // Perfectly centered horizontally on the 210mm page
-                line.x = (210 - line.width) / 2; 
+            titleLines.forEach((lineText, index) => {
+                const lineWidth = getSpacedTextWidth(doc, lineText, titleFontSize, 1, 5);
+                titleLines[index] = {
+                    text: lineText,
+                    width: lineWidth,
+                    topY: currentY,
+                    baselineY: currentY + 10,
+                    underlineY: currentY + 10 + 1,
+                    x: titleStartX // Left-aligned at 37mm
+                };
                 
                 if (index === 0 && titleLines.length === 2) {
-                    currentY = line.underlineY + 5; // 5mm gap to top of next line's text
+                    currentY = titleLines[index].underlineY + 5; // 5mm gap to top of next line's text
                 }
             });
 
@@ -420,7 +442,6 @@
                 el.style.left = line.x + 'mm';
                 el.style.top = line.topY + 'mm';
                 el.style.width = line.width + 'mm';
-                // Approximate spacing for CSS preview
                 el.style.letterSpacing = '1mm';
                 el.style.wordSpacing = '5mm';
                 container.appendChild(el);
