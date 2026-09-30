@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A4 Cover Page Generator</title>
+    <title>A4 Cover Page Generator (Simplex)</title>
     <!-- jsPDF CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         /* 
          * FONT SETUP 
-         * Replace 'Rhino-Single-Line.ttf' with your actual local font file path.
+         * Place 'Simplex.ttf' in the same directory as this HTML file.
          */
         @font-face {
-            font-family: 'Rhino';
-            src: url('Rhino-Single-Line.ttf') format('truetype');
+            font-family: 'Simplex';
+            src: url('Simplex.ttf') format('truetype');
             font-weight: normal;
             font-style: normal;
         }
@@ -52,7 +52,7 @@
         }
 
         .form-panel h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 10px; }
-        .form-panel p { font-size: 0.875rem; color: #6b7280; margin-bottom: 20px; }
+        .form-panel p { font-size: 0.875rem; color: #6b7280; margin-bottom: 20px; line-height: 1.5; }
 
         .input-group { display: flex; flex-direction: column; gap: 6px; }
         .input-group label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #4b5563; }
@@ -86,6 +86,7 @@
             gap: 8px;
         }
         .btn-download:hover { background-color: var(--primary-hover); }
+        .btn-download:disabled { background-color: #9ca3af; cursor: not-allowed; }
 
         /* --- Right Panel: Preview --- */
         .preview-panel {
@@ -104,13 +105,14 @@
             position: absolute;
             top: 20px;
             right: 40px;
-            background: rgba(255,255,255,0.9);
+            background: rgba(255,255,255,0.95);
             padding: 8px 16px;
             border-radius: 20px;
             font-size: 0.8rem;
             font-weight: 600;
             color: #6b7280;
             border: 1px solid var(--border-color);
+            backdrop-filter: blur(4px);
         }
 
         /* A4 Page Container */
@@ -121,7 +123,6 @@
             position: relative;
             box-shadow: 0 10px 30px rgba(0,0,0,0.15);
             flex-shrink: 0;
-            /* Scale down for smaller screens while maintaining mm proportions */
             transform-origin: top center;
         }
 
@@ -149,7 +150,7 @@
         .pdf-text {
             position: absolute;
             white-space: nowrap;
-            font-family: 'Rhino', 'Helvetica Neue', Helvetica, Arial, sans-serif; /* Fallback for preview */
+            font-family: 'Simplex', 'Courier New', Courier, monospace; /* Monospace fallback approximates CAD spacing */
             color: #000;
             line-height: 1;
         }
@@ -159,7 +160,7 @@
             position: absolute;
             left: 0;
             width: 100%;
-            height: 0.5px; /* Visual representation of 1mm in CSS context */
+            height: 0.5px;
             background-color: #000;
         }
 
@@ -181,7 +182,7 @@
     <div class="form-panel">
         <div>
             <h2>Cover Page Designer</h2>
-            <p>Fill in the details. Empty fields (except Title) will be automatically skipped in the layout.</p>
+            <p>Fill in the details. Empty fields (except Title) will be automatically skipped in the layout, shifting remaining items up.</p>
         </div>
 
         <form id="coverForm">
@@ -210,7 +211,7 @@
                 <input type="date" id="date">
             </div>
 
-            <button type="button" class="btn-download" onclick="generatePDF()">
+            <button type="button" class="btn-download" id="downloadBtn" onclick="generatePDF()">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                 Download PDF
             </button>
@@ -230,6 +231,31 @@
 
     <script>
         const { jsPDF } = window.jspdf;
+
+        // =====================================================================
+        // FONT CONFIGURATION
+        // Replace the string below with the actual Base64 encoded content of Simplex.ttf
+        // You can generate this by reading the file in JS or using an online base64 converter.
+        // For now, it falls back to 'helvetica' if this is a dummy string, ensuring the app runs.
+        // =====================================================================
+        const SIMPLEX_FONT_BASE64 = "AAEAAAARAQAABAAQR0RFRgAAAAAAAAA..."; // <-- REPLACE WITH ACTUAL BASE64
+        
+        let fontLoaded = false;
+        let activeFontName = 'helvetica'; // Fallback
+
+        // Attempt to register the custom font
+        try {
+            // Check if it looks like a real base64 font string (starts with AAe or similar)
+            if (SIMPLEX_FONT_BASE64.length > 1000) {
+                const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+                doc.addFileToVFS('Simplex.ttf', SIMPLEX_FONT_BASE64);
+                doc.addFont('Simplex.ttf', 'Simplex', 'normal');
+                activeFontName = 'Simplex';
+                fontLoaded = true;
+            }
+        } catch (e) {
+            console.warn("Custom font not loaded. Using fallback.", e);
+        }
 
         // Form elements
         const inputs = {
@@ -263,31 +289,55 @@
             };
         }
 
+        // Helper: Calculate exact width of text with custom char/word spacing
+        function getSpacedTextWidth(doc, text, fontSize, charSpaceMM, wordSpaceMM) {
+            doc.setFontSize(fontSize);
+            doc.setCharSpace(charSpaceMM);
+            const words = text.split(' ');
+            let totalWidth = 0;
+            for (let i = 0; i < words.length; i++) {
+                totalWidth += doc.getTextWidth(words[i]);
+                if (i < words.length - 1) {
+                    totalWidth += wordSpaceMM;
+                }
+            }
+            doc.setCharSpace(0);
+            return totalWidth;
+        }
+
+        // Helper: Draw text with exact spacing and return end X coordinate
+        function drawSpacedText(doc, text, x, y, fontSize, charSpaceMM, wordSpaceMM) {
+            doc.setFontSize(fontSize);
+            doc.setCharSpace(charSpaceMM);
+            const words = text.split(' ');
+            let currentX = x;
+            for (let i = 0; i < words.length; i++) {
+                doc.text(words[i], currentX, y);
+                currentX += doc.getTextWidth(words[i]) + wordSpaceMM;
+            }
+            doc.setCharSpace(0);
+            return currentX - wordSpaceMM;
+        }
+
         function calculateLayout(data) {
-            // Initialize a mock jsPDF instance purely for text measurement
             const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+            doc.setFont(activeFontName, 'normal');
             
-            // NOTE: To use your exact Rhino font, uncomment and configure these lines:
-            // const rhinoBase64 = "AAEAAAARAQA..."; // Your base64 encoded Rhino-Single-Line.ttf
-            // doc.addFileToVFS('Rhino.ttf', rhinoBase64);
-            // doc.addFont('Rhino.ttf', 'Rhino', 'normal');
-            // doc.setFont('Rhino');
-            
-            // Fallback for measurement (ensure your local CSS @font-face matches this metric closely)
-            doc.setFont('helvetica', 'normal'); 
+            // 1 pt = 0.352778 mm. Therefore, mm to pt = mm / 0.352778
+            const ptPerMm = 2.83465;
 
             // 1. Filter valid bottom-right items
             const items = [];
-            if (data.name) items.push({ id: 'name', text: data.name, height: 5 });
-            if (data.eNumber) items.push({ id: 'eNumber', text: data.eNumber, height: 4 });
-            if (data.group) items.push({ id: 'group', text: data.group, height: 4 });
-            if (data.semester) items.push({ id: 'semester', text: data.semester, height: 4 });
-            if (data.date) items.push({ id: 'date', text: data.date, height: 4 });
+            if (data.name) items.push({ id: 'name', text: data.name, height: 5, fontSize: 5 * ptPerMm, charSpace: 1, wordSpace: 3 });
+            if (data.eNumber) items.push({ id: 'eNumber', text: data.eNumber, height: 4, fontSize: 4 * ptPerMm, charSpace: 1, wordSpace: 3 });
+            if (data.group) items.push({ id: 'group', text: data.group, height: 4, fontSize: 4 * ptPerMm, charSpace: 1, wordSpace: 3 });
+            if (data.semester) items.push({ id: 'semester', text: data.semester, height: 4, fontSize: 4 * ptPerMm, charSpace: 1, wordSpace: 3 });
+            if (data.date) items.push({ id: 'date', text: data.date, height: 4, fontSize: 4 * ptPerMm, charSpace: 1, wordSpace: 3 });
 
             // 2. Calculate X-Axis (Right Alignment Logic)
             let maxWidth = 0;
             items.forEach(item => {
-                item.width = doc.getTextWidth(item.text);
+                item.width = getSpacedTextWidth(doc, item.text, item.fontSize, item.charSpace, item.wordSpace);
                 if (item.width > maxWidth) maxWidth = item.width;
             });
 
@@ -295,16 +345,14 @@
             const startX = 188 - maxWidth;
 
             // 3. Calculate Y-Axis (Bottom-Up Anchoring)
-            // Last item underline must be 15mm above bottom page border (285mm). So, 270mm.
             if (items.length > 0) {
                 for (let i = items.length - 1; i >= 0; i--) {
                     const item = items[i];
                     if (i === items.length - 1) {
-                        item.underlineY = 270;
+                        item.underlineY = 270; // 15mm above bottom border (285 - 15)
                     } else {
                         const nextItem = items[i + 1];
                         // Distance between underline of top item and top of text of item below = 3mm
-                        // topY of next item = baselineY - height
                         item.underlineY = (nextItem.baselineY - nextItem.height) - 3;
                     }
                     item.baselineY = item.underlineY - 1; // Underline is 1mm below baseline
@@ -313,10 +361,11 @@
                 }
             }
 
-            const targetTopY = items.length > 0 ? items[0].topY : 285; // Fallback if no details
+            const targetTopY = items.length > 0 ? items[0].topY : 250; // Fallback if no details
 
             // 4. Title Block Calculation
-            const titleWidth = doc.getTextWidth(data.title);
+            const titleFontSize = 10 * ptPerMm; // 28.35 pt
+            const titleWidth = getSpacedTextWidth(doc, data.title, titleFontSize, 1, 5);
             let titleLines = [];
 
             if (titleWidth <= 160) {
@@ -325,13 +374,13 @@
                 // Split into exactly two lines at the nearest space to the middle
                 const mid = Math.floor(data.title.length / 2);
                 let splitIndex = data.title.lastIndexOf(' ', mid);
-                if (splitIndex === -1 || splitIndex === 0) splitIndex = mid; // Fallback
+                if (splitIndex === -1 || splitIndex === 0) splitIndex = mid; 
                 
                 const line1 = data.title.substring(0, splitIndex).trim();
                 const line2 = data.title.substring(splitIndex).trim();
                 titleLines = [
-                    { text: line1, width: doc.getTextWidth(line1) },
-                    { text: line2, width: doc.getTextWidth(line2) }
+                    { text: line1, width: getSpacedTextWidth(doc, line1, titleFontSize, 1, 5) },
+                    { text: line2, width: getSpacedTextWidth(doc, line2, titleFontSize, 1, 5) }
                 ];
             }
 
@@ -339,9 +388,9 @@
             
             // Vertically center between top border (12mm) and targetTopY
             const midY = (12 + targetTopY) / 2;
-            const titleTopY = midY - (titleBlockHeight / 2);
+            const titleBlockTopY = midY - (titleBlockHeight / 2);
 
-            let currentY = titleTopY;
+            let currentY = titleBlockTopY;
             titleLines.forEach((line, index) => {
                 line.topY = currentY;
                 line.baselineY = currentY + 10;
@@ -371,6 +420,9 @@
                 el.style.left = line.x + 'mm';
                 el.style.top = line.topY + 'mm';
                 el.style.width = line.width + 'mm';
+                // Approximate spacing for CSS preview
+                el.style.letterSpacing = '1mm';
+                el.style.wordSpacing = '5mm';
                 container.appendChild(el);
             });
 
@@ -382,53 +434,52 @@
                 el.style.left = item.x + 'mm';
                 el.style.top = item.topY + 'mm';
                 el.style.width = item.width + 'mm';
+                el.style.letterSpacing = '1mm';
+                el.style.wordSpacing = '3mm';
                 container.appendChild(el);
             });
         }
 
         function generatePDF() {
-            const data = getFormData();
-            const layout = calculateLayout(data);
-            
-            const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-            
-            // TODO: ADD CUSTOM FONT HERE FOR FINAL OUTPUT
-            // const rhinoBase64 = "YOUR_BASE64_STRING_HERE";
-            // doc.addFileToVFS('Rhino.ttf', rhinoBase64);
-            // doc.addFont('Rhino.ttf', 'Rhino', 'normal');
-            // doc.setFont('Rhino');
-            
-            doc.setFont('helvetica', 'normal'); // Fallback
-            doc.setTextColor(0, 0, 0);
+            const btn = document.getElementById('downloadBtn');
+            btn.disabled = true;
+            btn.innerHTML = 'Generating...';
 
-            // 1. Draw Page Border (12mm from all edges)
-            doc.setLineWidth(0.5);
-            doc.rect(12, 12, 186, 273);
-
-            // Helper to draw text with exact 1mm underline
-            const drawTextWithUnderline = (text, x, baselineY, fontSize) => {
-                doc.setFontSize(fontSize);
-                doc.text(text, x, baselineY);
+            // Use setTimeout to allow UI to update before heavy PDF generation
+            setTimeout(() => {
+                const data = getFormData();
+                const layout = calculateLayout(data);
                 
-                // Draw underline exactly 1mm below baseline
-                const textWidth = doc.getTextWidth(text);
-                doc.setLineWidth(0.3); // ~0.1mm visual weight
-                doc.line(x, baselineY + 1, x + textWidth, baselineY + 1);
-            };
+                const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+                doc.setFont(activeFontName, 'normal');
+                doc.setTextColor(0, 0, 0);
 
-            // 2. Draw Title
-            layout.titleLines.forEach(line => {
-                drawTextWithUnderline(line.text, line.x, line.baselineY, 10);
-            });
+                // 1. Draw Page Border (12mm from all edges)
+                doc.setLineWidth(0.5);
+                doc.rect(12, 12, 186, 273);
 
-            // 3. Draw Details
-            layout.items.forEach(item => {
-                drawTextWithUnderline(item.text, item.x, item.baselineY, item.height);
-            });
+                // 2. Draw Title
+                layout.titleLines.forEach(line => {
+                    drawSpacedText(doc, line.text, line.x, line.baselineY, 10 * 2.83465, 1, 5);
+                    doc.setLineWidth(0.3);
+                    doc.line(line.x, line.underlineY, line.x + line.width, line.underlineY);
+                });
 
-            // Save
-            const safeName = data.name.replace(/[^a-zA-Z0-9]/g, '_') || 'CoverPage';
-            doc.save(`${safeName}_CoverPage.pdf`);
+                // 3. Draw Details
+                layout.items.forEach(item => {
+                    drawSpacedText(doc, item.text, item.x, item.baselineY, item.fontSize, item.charSpace, item.wordSpace);
+                    doc.setLineWidth(0.3);
+                    doc.line(item.x, item.underlineY, item.x + item.width, item.underlineY);
+                });
+
+                // Save
+                const safeName = data.name.replace(/[^a-zA-Z0-9]/g, '_') || 'CoverPage';
+                doc.save(`${safeName}_CoverPage.pdf`);
+
+                // Reset button
+                btn.disabled = false;
+                btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Download PDF`;
+            }, 100);
         }
     </script>
 </body>
