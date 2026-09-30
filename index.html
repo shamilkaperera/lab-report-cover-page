@@ -239,10 +239,12 @@
         let activeFontName = 'helvetica';
         let fontReady = false;
 
+        // --- ALL CONSTANTS MOVED TO THE TOP TO FIX INITIALIZATION ERROR ---
         const GLYPH_SCALE = 1.35;
         const TITLE_VISIBLE_HEIGHT = 10;
         const NAME_VISIBLE_HEIGHT = 5;
         const DETAIL_VISIBLE_HEIGHT = 4;
+        const ptPerMm = 2.83465; 
 
         const TITLE_FONT_MM = TITLE_VISIBLE_HEIGHT * GLYPH_SCALE;
         const NAME_FONT_MM = NAME_VISIBLE_HEIGHT * GLYPH_SCALE;
@@ -252,7 +254,7 @@
             const statusEl = document.getElementById('fontStatus');
             if(!statusEl) return;
             statusEl.className = `font-status ${status}`;
-            const icons = { loading: '⏳', success: '✓', error: '✗' };
+            const icons = { loading: '', success: '✓', error: '' };
             statusEl.innerHTML = `<span>${icons[status]}</span> ${message}`;
         }
 
@@ -326,10 +328,7 @@
             };
         }
 
-        const ptPerMm = 2.83465;
-
         // FIXED: Measure text by drawing each character individually
-        // This ensures spacing is between visible glyphs, not font boxes
         function getSpacedTextWidth(doc, text, fontSizeMM, charSpaceMM, wordSpaceMM) {
             doc.setFontSize(fontSizeMM * ptPerMm);
             const words = text.split(' ');
@@ -337,20 +336,16 @@
             
             for (let w = 0; w < words.length; w++) {
                 const word = words[w];
-                // Measure each character in the word
                 for (let c = 0; c < word.length; c++) {
                     totalWidth += doc.getTextWidth(word[c]);
-                    // Add 1mm gap after each character (except last in word)
                     if (c < word.length - 1) {
                         totalWidth += charSpaceMM;
                     }
                 }
-                // Add word gap after each word (except last)
                 if (w < words.length - 1) {
                     totalWidth += wordSpaceMM;
                 }
             }
-            
             return totalWidth;
         }
 
@@ -362,21 +357,17 @@
             
             for (let w = 0; w < words.length; w++) {
                 const word = words[w];
-                // Draw each character individually
                 for (let c = 0; c < word.length; c++) {
                     doc.text(word[c], currentX, baselineY);
                     currentX += doc.getTextWidth(word[c]);
-                    // Add 1mm gap after each character (except last in word)
                     if (c < word.length - 1) {
                         currentX += charSpaceMM;
                     }
                 }
-                // Add word gap after each word (except last)
                 if (w < words.length - 1) {
                     currentX += wordSpaceMM;
                 }
             }
-            
             return currentX;
         }
 
