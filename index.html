@@ -64,7 +64,7 @@
         
         .input-group textarea {
             resize: vertical;
-            min-height: 60px;
+            min-height: 80px; /* Increased height for multi-line */
         }
 
         .input-group input:focus, .input-group textarea:focus {
@@ -187,7 +187,7 @@
         <form id="coverForm">
             <div class="input-group">
                 <label for="title">Title of Experiment * (Press Enter for new line)</label>
-                <textarea id="title" rows="2" placeholder="e.g., MECHANICS&#10;OF VIBRATIONS" required></textarea>
+                <textarea id="title" rows="3" placeholder="e.g., MECHANICS&#10;OF VIBRATIONS&#10;AND CONTROL" required></textarea>
             </div>
             <div class="input-group">
                 <label for="name">Name</label>
@@ -236,13 +236,10 @@
 
         async function loadCustomFont() {
             try {
-                // Fetch the font file from the same directory on your GitHub Pages
                 const response = await fetch('./Simplex.ttf');
                 if (!response.ok) throw new Error('Font file not found');
                 
                 const buffer = await response.arrayBuffer();
-                
-                // Convert ArrayBuffer to Base64 string for jsPDF
                 const bytes = new Uint8Array(buffer);
                 let binary = '';
                 for (let i = 0; i < bytes.byteLength; i++) {
@@ -250,7 +247,6 @@
                 }
                 const base64 = btoa(binary);
 
-                // Add to jsPDF Virtual File System
                 const doc = new jsPDF({ unit: 'mm', format: 'a4' });
                 doc.addFileToVFS('Simplex.ttf', base64);
                 doc.addFont('Simplex.ttf', 'Simplex', 'normal');
@@ -259,12 +255,11 @@
                 fontReady = true;
                 console.log("✓ Simplex font loaded successfully from GitHub");
             } catch (error) {
-                console.warn("⚠ Could not load Simplex.ttf. Make sure it's in the same folder. Using fallback.", error);
-                fontReady = true; // Prevent infinite loading
+                console.warn(" Could not load Simplex.ttf. Using fallback.", error);
+                fontReady = true; 
             }
         }
 
-        // Start loading font immediately
         loadCustomFont();
 
         const inputs = {
@@ -375,27 +370,31 @@
 
             const targetTopY = items.length > 0 ? items[0].topY : 250;
 
-            // 4. Title Block (Centered Horizontally, Split by Enter)
+            // 4. Title Block (Supports ANY number of lines)
             const titleFontSize = 10 * ptPerMm;
             
+            // Split title by newline (Enter key)
             const rawTitleLines = data.title.split('\n').map(l => l.trim()).filter(l => l !== '');
             const titleLines = [];
-            let maxTitleWidth = 0;
 
             rawTitleLines.forEach(lineText => {
                 const lineWidth = getSpacedTextWidth(doc, lineText, titleFontSize, 1, 5);
                 titleLines.push({ text: lineText, width: lineWidth });
-                if (lineWidth > maxTitleWidth) maxTitleWidth = lineWidth;
             });
 
+            // Fallback if empty
             if (titleLines.length === 0) {
                 const fallbackWidth = getSpacedTextWidth(doc, 'TITLE OF EXPERIMENT', titleFontSize, 1, 5);
                 titleLines.push({ text: 'TITLE OF EXPERIMENT', width: fallbackWidth });
-                maxTitleWidth = fallbackWidth;
             }
 
-            const titleBlockHeight = titleLines.length === 1 ? (10 + 1) : (10 + 1 + 5 + 10 + 1);
+            // Calculate Total Height of Title Block
+            // Formula: (N lines * 11mm) + ((N-1) gaps * 5mm)
+            // 11mm = 10mm text height + 1mm underline gap
+            const numLines = titleLines.length;
+            const titleBlockHeight = (numLines * 11) + ((numLines - 1) * 5);
             
+            // Vertically center between top border (12mm) and targetTopY
             const midY = (12 + targetTopY) / 2;
             const titleBlockTopY = midY - (titleBlockHeight / 2);
 
@@ -403,12 +402,12 @@
             titleLines.forEach((line, index) => {
                 line.topY = currentY;
                 line.baselineY = currentY + 10;
-                line.underlineY = currentY + 10 + 1;
+                line.underlineY = currentY + 11; // 10mm text + 1mm gap
+                // PERFECTLY CENTERED HORIZONTALLY ON THE 210mm PAGE
                 line.x = (210 - line.width) / 2; 
                 
-                if (index === 0 && titleLines.length === 2) {
-                    currentY = line.underlineY + 5;
-                }
+                // Move down for next line: underlineY + 5mm gap
+                currentY = line.underlineY + 5; 
             });
 
             return { items, titleLines };
@@ -440,7 +439,6 @@
         }
 
         async function generatePDF() {
-            // Wait for font to finish loading from GitHub before generating
             if (!fontReady) {
                 document.getElementById('downloadBtn').innerText = 'Loading Font...';
                 while (!fontReady) {
@@ -464,9 +462,9 @@
                 doc.setLineWidth(0.8);
                 doc.rect(12, 12, 186, 273);
 
-                // Title
+                // Title (Handles N lines)
                 layout.titleLines.forEach(line => {
-                    drawSpacedText(doc, line.text, line.x, line.baselineY, 10 * ptPerMm, 1, 5);
+                    drawSpacedText(doc, line.text, line.x, line.baselineY, 10 * 2.83465, 1, 5);
                     doc.setLineWidth(0.5);
                     doc.line(line.x, line.underlineY, line.x + line.width, line.underlineY);
                 });
