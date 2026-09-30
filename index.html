@@ -3,75 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lab Report Cover Page Generator</title>
+    <title>Cover Page Designer</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <!-- html2pdf library for perfect A4 PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <!-- Input Form -->
-        <div class="form-section">
-            <h1> Lab Report Cover Page Generator</h1>
-            <p class="subtitle">Fill in the details below to generate your cover page</p>
+    <div class="app-container">
+        <!-- Left Side: Input Form -->
+        <div class="form-panel">
+            <div class="form-header">
+                <h2>Cover Page Designer</h2>
+                <p>Fill in the details to generate your A4 cover page.</p>
+            </div>
             
-            <form id="coverForm">
-                <div class="form-group">
-                    <label for="title">Title of Experiment *</label>
-                    <input type="text" id="title" name="title" required placeholder="e.g., Mechanics of Vibrations">
+            <form id="coverForm" onsubmit="return false;">
+                <div class="input-group">
+                    <label>Course Code</label>
+                    <input type="text" id="courseCode" placeholder="e.g., ME3020">
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="name">Full Name *</label>
-                        <input type="text" id="name" name="name" required placeholder="Your name">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="regNumber">Registration Number *</label>
-                        <input type="text" id="regNumber" name="regNumber" required placeholder="e.g., E/2020/123">
-                    </div>
+                <div class="input-group">
+                    <label>Title of Experiment *</label>
+                    <input type="text" id="title" required placeholder="e.g., INSTRUMENTATION">
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="groupNumber">Group Number *</label>
-                        <input type="text" id="groupNumber" name="groupNumber" required placeholder="e.g., Group 5">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="semester">Semester *</label>
-                        <input type="text" id="semester" name="semester" required placeholder="e.g., Semester 1">
-                    </div>
+                <div class="input-group">
+                    <label>Full Name *</label>
+                    <input type="text" id="name" required placeholder="e.g., PULLE D.S.C.F.">
                 </div>
 
-                <div class="form-group">
-                    <label for="date">Date *</label>
-                    <input type="date" id="date" name="date" required>
+                <div class="input-group">
+                    <label>Registration Number (E-Number) *</label>
+                    <input type="text" id="regNumber" required placeholder="e.g., E/23/281">
+                    <!-- NO VALIDATION BLOCKER HERE - ANYONE CAN TYPE ANYTHING -->
                 </div>
 
-                <div class="button-group">
-                    <button type="button" onclick="generateCover()" class="btn btn-primary">Generate Cover Page</button>
-                    <button type="button" onclick="printCover()" class="btn btn-secondary" id="printBtn" disabled>🖨️ Print / Save as PDF</button>
+                <div class="input-group">
+                    <label>Group Number *</label>
+                    <input type="text" id="groupNumber" required placeholder="e.g., GROUP B6">
                 </div>
+
+                <div class="input-group">
+                    <label>Semester *</label>
+                    <input type="text" id="semester" required placeholder="e.g., SEMESTER CS I">
+                </div>
+
+                <div class="input-group">
+                    <label>Date *</label>
+                    <input type="date" id="date" required>
+                </div>
+
+                <button type="button" class="btn-download" onclick="downloadPDF()">
+                    📥 Download as PDF
+                </button>
             </form>
         </div>
 
-        <!-- Preview Section -->
-        <div class="preview-section" id="previewSection">
-            <h2>Preview</h2>
-            <div id="coverPage" class="cover-page">
-                <div class="cover-content">
-                    <div class="title-section">
-                        <h1 id="previewTitle" class="experiment-title">TITLE OF EXPERIMENT</h1>
-                    </div>
+        <!-- Right Side: Live A4 Preview -->
+        <div class="preview-panel">
+            <div class="preview-header">
+                <h3>Live Preview</h3>
+            </div>
+            <div class="preview-wrapper">
+                <div id="coverPage" class="a4-page">
+                    <!-- Outer Frame -->
+                    <div class="outer-frame"></div>
                     
-                    <div class="details-section">
-                        <p id="previewName">NAME</p>
-                        <p id="previewRegNumber">REG. NO.</p>
-                        <p id="previewGroupNumber">GROUP NO.</p>
-                        <p id="previewSemester">SEMESTER</p>
-                        <p id="previewDate">DATE</p>
-                    </div>
+                    <div class="page-content">
+                        <!-- Course Code (Top Center) -->
+                        <div class="course-code-box">
+                            <span id="outCourseCode"></span>
+                        </div>
+
+                        <!-- Title (Centered Vertically & Horizontally) -->
+                        <div class="title-box">
+                            <h1 id="outTitle">TITLE OF EXPERIMENT</h1>
+                        </div>
+                        
+                        <!-- Details (Bottom Right) -->
+                        <div class="details-box">
+                            <p id="outName">NAME</p>
+                            <p id="outRegNumber">REG. NO.</p>
+                            <p id="outGroupNumber">GROUP NO.</p>
+                            <p id="outSemester">SEMESTER</p>
+                            <p id="outDate">DATE</p>
+                        </div>
+                    </div each>
                 </div>
             </div>
         </div>
