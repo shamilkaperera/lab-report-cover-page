@@ -1,0 +1,267 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+}
+
+/* Form Section */
+.form-section {
+    background: white;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    height: fit-content;
+}
+
+h1 {
+    color: #333;
+    margin-bottom: 10px;
+    font-size: 28px;
+}
+
+.subtitle {
+    color: #666;
+    margin-bottom: 30px;
+    font-size: 14px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    color: #555;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.3s;
+    font-family: 'Inter', sans-serif;
+}
+
+input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.button-group {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.btn {
+    flex: 1;
+    padding: 14px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary {
+    background: #f0f0f0;
+    color: #333;
+}
+
+.btn-secondary:hover {
+    background: #e0e0e0;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Preview Section */
+.preview-section {
+    background: white;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    display: none;
+}
+
+.preview-section.active {
+    display: block;
+}
+
+.preview-section h2 {
+    margin-bottom: 20px;
+    color: #333;
+    font-size: 24px;
+}
+
+/* Cover Page - A4 Dimensions */
+.cover-page {
+    width: 210mm;
+    height: 297mm;
+    background: white;
+    border: 1px solid #ddd;
+    position: relative;
+    margin: 0 auto;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.cover-content {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    padding: 12mm; /* Standard A4 margins */
+}
+
+/* Title Section - Centered */
+.title-section {
+    text-align: center;
+    margin-top: 12mm; /* 12mm from top */
+}
+
+.experiment-title {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 24pt; /* Large title */
+    font-weight: bold;
+    text-transform: uppercase;
+    border-bottom: 2px solid black;
+    display: inline-block;
+    padding-bottom: 1mm;
+    margin-bottom: 10mm; /* 10mm spacing after title */
+    letter-spacing: 1mm;
+}
+
+/* Details Section - Bottom Right */
+.details-section {
+    position: absolute;
+    bottom: 12mm; /* 12mm from bottom */
+    right: 12mm; /* 12mm from right */
+    text-align: left;
+    font-family: 'Times New Roman', Times, serif;
+}
+
+.details-section p {
+    font-size: 11pt; /* Standard size */
+    margin: 0;
+    line-height: 1.5;
+    color: #000;
+}
+
+.details-section p:first-child {
+    font-weight: bold;
+    font-size: 14pt; /* Name is larger - 5mm letter size */
+    margin-bottom: 5mm; /* 5mm spacing */
+}
+
+.details-section p:nth-child(2),
+.details-section p:nth-child(3),
+.details-section p:nth-child(4) {
+    font-size: 11pt; /* 4mm letter size for others */
+    margin-bottom: 4mm; /* 4mm spacing */
+}
+
+.details-section p:last-child {
+    margin-bottom: 0;
+}
+
+/* Print Styles */
+@media print {
+    body {
+        background: white;
+        padding: 0;
+    }
+    
+    .container {
+        grid-template-columns: 1fr;
+        max-width: 210mm;
+    }
+    
+    .form-section {
+        display: none;
+    }
+    
+    .preview-section {
+        display: block !important;
+        padding: 0;
+        box-shadow: none;
+    }
+    
+    .cover-page {
+        box-shadow: none;
+        border: none;
+        margin: 0;
+        page-break-after: always;
+    }
+    
+    @page {
+        size: A4;
+        margin: 12mm;
+    }
+}
+
+/* Mobile Responsive */
+@media (max-width: 968px) {
+    .container {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .cover-page {
+        transform: scale(0.5);
+        transform-origin: top center;
+        margin-bottom: -200mm;
+    }
+}
+
+/* Loading Animation */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.preview-section.active {
+    animation: fadeIn 0.5s ease;
+}
