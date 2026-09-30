@@ -5,263 +5,232 @@
 }
 
 body {
-    font-family: 'Inter', sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    min-height: 100vh;
-    padding: 20px;
-}
-
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 30px;
-}
-
-/* Form Section */
-.form-section {
-    background: white;
-    padding: 40px;
-    border-radius: 12px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-    height: fit-content;
-}
-
-h1 {
+    font-family: 'Arial', 'Helvetica', sans-serif;
+    background-color: #f0f2f5;
     color: #333;
-    margin-bottom: 10px;
-    font-size: 28px;
+    height: 100vh;
+    overflow: hidden; /* Prevent body scroll, handle inside panels */
 }
 
-.subtitle {
-    color: #666;
+.app-container {
+    display: flex;
+    height: 100vh;
+}
+
+/* --- Left Form Panel --- */
+.form-panel {
+    width: 400px;
+    background: #ffffff;
+    padding: 30px;
+    overflow-y: auto;
+    border-right: 1px solid #ddd;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+}
+
+.form-header {
     margin-bottom: 30px;
-    font-size: 14px;
 }
 
-.form-group {
+.form-header h2 {
+    font-size: 24px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 8px;
+}
+
+.form-header p {
+    font-size: 14px;
+    color: #666;
+}
+
+.input-group {
     margin-bottom: 20px;
 }
 
-.form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-}
-
-label {
+.input-group label {
     display: block;
-    margin-bottom: 8px;
-    color: #555;
+    font-size: 13px;
     font-weight: 600;
-    font-size: 14px;
+    color: #444;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-input {
+.input-group input {
     width: 100%;
-    padding: 12px 15px;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    font-size: 14px;
-    transition: border-color 0.3s;
-    font-family: 'Inter', sans-serif;
+    padding: 10px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 15px;
+    font-family: 'Arial', sans-serif;
+    transition: border-color 0.2s;
 }
 
-input:focus {
+.input-group input:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: #0056b3;
 }
 
-.button-group {
-    display: flex;
-    gap: 15px;
-    margin-top: 30px;
-}
-
-.btn {
-    flex: 1;
-    padding: 14px 24px;
+.btn-download {
+    width: 100%;
+    padding: 14px;
+    background-color: #0056b3;
+    color: white;
     border: none;
-    border-radius: 8px;
+    border-radius: 6px;
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s;
+    margin-top: 10px;
+    transition: background-color 0.2s;
 }
 
-.btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+.btn-download:hover {
+    background-color: #004494;
 }
 
-.btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-}
-
-.btn-secondary {
-    background: #f0f0f0;
-    color: #333;
-}
-
-.btn-secondary:hover {
-    background: #e0e0e0;
-}
-
-.btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-}
-
-/* Preview Section */
-.preview-section {
-    background: white;
-    padding: 40px;
-    border-radius: 12px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-    display: none;
-}
-
-.preview-section.active {
-    display: block;
-}
-
-.preview-section h2 {
-    margin-bottom: 20px;
-    color: #333;
-    font-size: 24px;
-}
-
-/* Cover Page - A4 Dimensions */
-.cover-page {
-    width: 210mm;
-    height: 297mm;
-    background: white;
-    border: 1px solid #ddd;
-    position: relative;
-    margin: 0 auto;
-    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+/* --- Right Preview Panel --- */
+.preview-panel {
+    flex: 1;
+    background-color: #e9ecef;
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
 }
 
-.cover-content {
+.preview-header {
+    padding: 15px 30px;
+    background: #fff;
+    border-bottom: 1px solid #ddd;
+}
+
+.preview-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #555;
+}
+
+.preview-wrapper {
+    flex: 1;
+    overflow: auto;
+    padding: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+/* --- EXACT A4 PAGE STYLING --- */
+.a4-page {
+    width: 210mm;
+    height: 297mm;
+    background: white;
+    position: relative;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    flex-shrink: 0;
+}
+
+/* Outer Frame: 15mm from all edges */
+.outer-frame {
+    position: absolute;
+    top: 15mm;
+    left: 15mm;
+    right: 15mm;
+    bottom: 15mm;
+    border: 1.5px solid #000;
+    pointer-events: none;
+}
+
+.page-content {
     position: relative;
     width: 100%;
     height: 100%;
-    padding: 12mm; /* Standard A4 margins */
+    padding: 15mm;
 }
 
-/* Title Section - Centered */
-.title-section {
+/* Course Code */
+.course-code-box {
     text-align: center;
-    margin-top: 12mm; /* 12mm from top */
+    margin-top: 10mm;
 }
 
-.experiment-title {
-    font-family: 'Times New Roman', Times, serif;
-    font-size: 24pt; /* Large title */
-    font-weight: bold;
+.course-code-box span {
+    font-size: 28pt;
+    font-weight: normal;
     text-transform: uppercase;
-    border-bottom: 2px solid black;
+    border-bottom: 1px solid #000;
+    padding-bottom: 2mm;
+    letter-spacing: 2px;
     display: inline-block;
-    padding-bottom: 1mm;
-    margin-bottom: 10mm; /* 10mm spacing after title */
-    letter-spacing: 1mm;
+    min-width: 200px;
 }
 
-/* Details Section - Bottom Right */
-.details-section {
+/* Title: Centered Vertically and Horizontally */
+.title-box {
     position: absolute;
-    bottom: 12mm; /* 12mm from bottom */
-    right: 12mm; /* 12mm from right */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    width: 80%;
+}
+
+.title-box h1 {
+    font-size: 26pt;
+    font-weight: normal;
+    text-transform: uppercase;
+    border-bottom: 1px solid #000;
+    padding-bottom: 3mm;
+    letter-spacing: 1px;
+    line-height: 1.3;
+}
+
+/* Details: Bottom Right */
+.details-box {
+    position: absolute;
+    bottom: 20mm;
+    right: 20mm;
     text-align: left;
-    font-family: 'Times New Roman', Times, serif;
 }
 
-.details-section p {
-    font-size: 11pt; /* Standard size */
-    margin: 0;
-    line-height: 1.5;
-    color: #000;
+.details-box p {
+    font-size: 12pt;
+    text-transform: uppercase;
+    border-bottom: 1px solid #000;
+    padding-bottom: 1mm;
+    margin-bottom: 5mm;
+    min-width: 250px;
+    white-space: nowrap;
 }
 
-.details-section p:first-child {
-    font-weight: bold;
-    font-size: 14pt; /* Name is larger - 5mm letter size */
-    margin-bottom: 5mm; /* 5mm spacing */
+/* Specific sizing to match academic standards */
+.details-box p:first-child {
+    font-size: 14pt; /* Name is slightly larger */
+    margin-bottom: 6mm;
 }
 
-.details-section p:nth-child(2),
-.details-section p:nth-child(3),
-.details-section p:nth-child(4) {
-    font-size: 11pt; /* 4mm letter size for others */
-    margin-bottom: 4mm; /* 4mm spacing */
-}
-
-.details-section p:last-child {
-    margin-bottom: 0;
-}
-
-/* Print Styles */
-@media print {
+/* Responsive scaling for smaller screens */
+@media (max-width: 1100px) {
+    .app-container {
+        flex-direction: column;
+        height: auto;
+        overflow: auto;
+    }
     body {
-        background: white;
-        padding: 0;
+        overflow: auto;
+        height: auto;
     }
-    
-    .container {
-        grid-template-columns: 1fr;
-        max-width: 210mm;
+    .form-panel {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
     }
-    
-    .form-section {
-        display: none;
+    .preview-wrapper {
+        padding: 20px;
     }
-    
-    .preview-section {
-        display: block !important;
-        padding: 0;
-        box-shadow: none;
-    }
-    
-    .cover-page {
-        box-shadow: none;
-        border: none;
-        margin: 0;
-        page-break-after: always;
-    }
-    
-    @page {
-        size: A4;
-        margin: 12mm;
-    }
-}
-
-/* Mobile Responsive */
-@media (max-width: 968px) {
-    .container {
-        grid-template-columns: 1fr;
-    }
-    
-    .form-row {
-        grid-template-columns: 1fr;
-    }
-    
-    .cover-page {
-        transform: scale(0.5);
+    .a4-page {
+        transform: scale(0.6);
         transform-origin: top center;
-        margin-bottom: -200mm;
+        margin-bottom: -120mm; /* Compensate for scale */
     }
-}
-
-/* Loading Animation */
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.preview-section.active {
-    animation: fadeIn 0.5s ease;
 }
