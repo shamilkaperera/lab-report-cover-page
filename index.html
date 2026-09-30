@@ -3,490 +3,393 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A4 Cover Page Generator - CAD Vector Engine</title>
-    <!-- jsPDF Library -->
+    <title>Cover Page Designer - CAD Vector Engine</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root {
-            --bg-color: #f3f4f6;
-            --panel-bg: #ffffff;
-            --border-color: #d1d5db;
             --primary: #2563eb;
-            --primary-hover: #1d4ed8;
+            --bg: #f8fafc;
+            --border: #e2e8f0;
         }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg-color);
-            color: #1f2937;
-            height: 100vh;
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 0;
             display: flex;
-            overflow: hidden;
+            height: 100vh;
+            background: var(--bg);
         }
-
-        .form-panel {
-            width: 380px;
-            background: var(--panel-bg);
-            border-right: 1px solid var(--border-color);
-            padding: 30px;
+        .sidebar {
+            width: 400px;
+            background: white;
+            padding: 2rem;
+            border-right: 1px solid var(--border);
             overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.05);
             display: flex;
             flex-direction: column;
-            gap: 20px;
-            box-shadow: 4px 0 15px rgba(0,0,0,0.05);
-            z-index: 10;
+            gap: 1.5rem;
         }
-
-        .form-panel h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 10px; }
-        .form-panel p { font-size: 0.875rem; color: #6b7280; margin-bottom: 20px; line-height: 1.5; }
-
-        .input-group { display: flex; flex-direction: column; gap: 6px; }
-        .input-group label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #4b5563; }
-        
-        .input-group input, .input-group textarea {
-            padding: 10px 12px;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            font-size: 0.95rem;
-            font-family: inherit;
-            transition: border-color 0.2s, box-shadow 0.2s;
+        h2 {
+            margin: 0 0 1rem 0;
+            font-size: 1.25rem;
+            color: #1e293b;
         }
-        
-        .input-group textarea { resize: vertical; min-height: 80px; }
-        .input-group input:focus, .input-group textarea:focus {
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #475569;
+        }
+        input, textarea {
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            transition: border-color 0.2s;
+        }
+        input:focus, textarea:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
         }
-
-        .btn-download {
-            margin-top: 20px;
-            padding: 12px;
-            background-color: var(--primary);
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        button {
+            background: var(--primary);
             color: white;
             border: none;
-            border-radius: 6px;
+            padding: 1rem;
+            border-radius: 0.375rem;
             font-weight: 600;
-            font-size: 1rem;
             cursor: pointer;
-            transition: background-color 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
+            transition: background 0.2s;
+            margin-top: auto;
         }
-        .btn-download:hover { background-color: var(--primary-hover); }
-        .btn-download:disabled { background-color: #9ca3af; cursor: not-allowed; }
-
-        .preview-panel {
+        button:hover {
+            background: #1d4ed8;
+        }
+        button:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+        .preview-container {
             flex: 1;
+            padding: 2rem;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            padding: 40px;
-            overflow: auto;
-            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
-            background-size: 20px 20px;
         }
-
         .preview-header {
-            position: absolute;
-            top: 20px;
-            right: 40px;
-            background: rgba(255,255,255,0.95);
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: #6b7280;
-            border: 1px solid var(--border-color);
-        }
-
-        .a4-page {
-            width: 210mm;
-            height: 297mm;
-            background: white;
-            position: relative;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-            flex-shrink: 0;
-            transform-origin: top center;
-        }
-
-        @media (max-height: 900px) { .a4-page { transform: scale(0.85); margin-top: -40mm; } }
-        @media (max-height: 750px) { .a4-page { transform: scale(0.7); margin-top: -80mm; } }
-        @media (max-width: 900px) { 
-            body { flex-direction: column; overflow: auto; } 
-            .form-panel { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border-color); }
-            .preview-panel { padding: 20px; }
-            .a4-page { transform: scale(0.5); margin-top: -140mm; margin-bottom: -140mm; }
-        }
-
-        .frame-border {
-            position: absolute;
-            top: 12mm;
-            left: 12mm;
-            width: 186mm;
-            height: 273mm;
-            border: 2px solid #000;
-            pointer-events: none;
-        }
-
-        /* Preview styling (uses a monospace fallback for visual approximation) */
-        .pdf-text {
-            position: absolute;
-            white-space: pre;
-            font-family: 'Courier New', Courier, monospace;
-            font-weight: bold;
-            color: #000;
-            line-height: 1;
-        }
-        .pdf-text::after {
-            content: '';
-            position: absolute;
-            left: 0;
             width: 100%;
-            height: 1px;
-            background-color: #000;
-            bottom: auto !important;
+            max-width: 800px;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            color: #64748b;
+            font-size: 0.875rem;
+            font-weight: 600;
         }
-        .text-title { font-size: 13.5mm !important; }
-        .text-title::after { top: 12.5mm !important; } 
-        .text-name { font-size: 6.75mm !important; }
-        .text-name::after { top: 6.5mm !important; } 
-        .text-detail { font-size: 5.4mm !important; }
-        .text-detail::after { top: 5.5mm !important; }
+        iframe {
+            width: 100%;
+            max-width: 800px;
+            height: 100%;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            background: white;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body>
 
-    <div class="form-panel">
-        <div>
-            <h2>Cover Page Designer</h2>
-            <p>Fill in the details. Press <strong>Enter</strong> in the Title box for new lines.</p>
+    <div class="sidebar">
+        <h2>Cover Page Designer</h2>
+        <div class="form-group">
+            <label>Title (Press Enter for new lines)</label>
+            <textarea id="titleInput" placeholder="ME3020&#10;INSTRUMENTATION"></textarea>
         </div>
-
-        <form id="coverForm">
-            <div class="input-group">
-                <label for="title">Title of Experiment *</label>
-                <textarea id="title" rows="4" placeholder="e.g., MECHANICS&#10;OF VIBRATIONS&#10;AND CONTROL" required></textarea>
-            </div>
-            <div class="input-group">
-                <label for="name">Name</label>
-                <input type="text" id="name" placeholder="e.g., PERERA A.B.C.">
-            </div>
-            <div class="input-group">
-                <label for="eNumber">E Number</label>
-                <input type="text" id="eNumber" placeholder="e.g., E/20/123">
-            </div>
-            <div class="input-group">
-                <label for="group">Group Number</label>
-                <input type="text" id="group" placeholder="e.g., GROUP 04">
-            </div>
-            <div class="input-group">
-                <label for="semester">Semester</label>
-                <input type="text" id="semester" placeholder="e.g., SEMESTER 3">
-            </div>
-            <div class="input-group">
-                <label for="date">Date</label>
-                <input type="date" id="date">
-            </div>
-
-            <button type="button" class="btn-download" id="downloadBtn" onclick="generatePDF()">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                Download PDF
-            </button>
-        </form>
+        <div class="form-group">
+            <label>Name</label>
+            <input type="text" id="nameInput" placeholder="PULLE D.S.C.F.">
+        </div>
+        <div class="form-group">
+            <label>E Number</label>
+            <input type="text" id="eNumInput" placeholder="E/23/281">
+        </div>
+        <div class="form-group">
+            <label>Group Number</label>
+            <input type="text" id="groupInput" placeholder="GROUP B6">
+        </div>
+        <div class="form-group">
+            <label>Semester</label>
+            <input type="text" id="semInput" placeholder="SEMESTER CS I">
+        </div>
+        <div class="form-group">
+            <label>Date</label>
+            <input type="text" id="dateInput" placeholder="09/23/2026">
+        </div>
+        <button id="downloadBtn">Download A4 PDF</button>
     </div>
 
-    <div class="preview-panel">
-        <div class="preview-header">Live A4 Preview</div>
-        <div class="a4-page" id="a4Page">
-            <div class="frame-border"></div>
-            <div id="previewContent"></div>
+    <div class="preview-container">
+        <div class="preview-header">
+            <span>Live Preview</span>
+            <span>A4 Size (210 x 297 mm)</span>
         </div>
+        <iframe id="pdfPreview"></iframe>
     </div>
 
     <script>
-        const { jsPDF } = window.jspdf;
-
         // =====================================================================
-        // 1. ZERO-PADDING CAD FONT DICTIONARY (Grid: X 0-8, Y 0-10)
+        // 1. ZERO-PADDING CAD VECTOR FONT ENGINE
+        // Grid: X from 0 to 8, Y from 0 to 10. Width = Height * 0.8
         // =====================================================================
-        const cadFont = {
-            'A': [[[0,10], [4,0], [8,10]], [[2,6], [6,6]]],
-            'B': [[[0,0], [0,10], [6,10], [8,8], [8,2], [6,0], [0,0]], [[0,5], [6,5]]],
-            'C': [[[8,2], [6,0], [2,0], [0,2], [0,8], [2,10], [6,10], [8,8]]],
-            'D': [[[0,0], [0,10], [5,10], [8,7], [8,3], [5,0], [0,0]]],
-            'E': [[[8,0], [0,0], [0,10], [8,10]], [[0,5], [6,5]]],
-            'F': [[[0,0], [0,10], [8,10]], [[0,5], [6,5]]],
-            'G': [[[8,2], [6,0], [2,0], [0,2], [0,8], [2,10], [6,10], [8,8], [8,5], [4,5]]],
-            'H': [[[0,0], [0,10]], [[8,0], [8,10]], [[0,5], [8,5]]],
-            'I': [[[4,0], [4,10]], [[2,0], [6,0]], [[2,10], [6,10]]],
-            'J': [[[6,0], [6,8], [4,10], [2,10], [0,8]]],
-            'K': [[[0,0], [0,10]], [[0,5], [8,0]], [[0,5], [8,10]]],
-            'L': [[[0,0], [0,10], [8,10]]],
-            'M': [[[0,10], [0,0], [4,5], [8,0], [8,10]]],
-            'N': [[[0,10], [0,0], [8,10], [8,0]]],
-            'O': [[[0,0], [8,0], [8,10], [0,10], [0,0]]],
-            'P': [[[0,0], [0,10], [6,10], [8,8], [8,2], [6,0], [0,0]]],
-            'Q': [[[0,0], [8,0], [8,10], [0,10], [0,0]], [[6,4], [8,0]]],
-            'R': [[[0,0], [0,10], [6,10], [8,8], [8,5], [6,3], [0,0]], [[4,5], [8,0]]],
-            'S': [[[8,2], [6,0], [2,0], [0,2], [0,5], [2,8], [6,10], [8,10], [8,8]]],
-            'T': [[[0,0], [8,0]], [[4,0], [4,10]]],
-            'U': [[[0,0], [0,8], [2,10], [6,10], [8,8], [8,0]]],
-            'V': [[[0,0], [4,10], [8,0]]],
-            'W': [[[0,0], [2,10], [4,5], [6,10], [8,0]]],
-            'X': [[[0,0], [8,10]], [[8,0], [0,10]]],
-            'Y': [[[0,0], [4,5], [4,10]], [[8,0], [4,5]]],
-            'Z': [[[0,0], [8,0], [0,10], [8,10]]],
-            '0': [[[0,0], [8,0], [8,10], [0,10], [0,0]], [[2,2], [6,8]]],
-            '1': [[[2,0], [4,0], [4,10]], [[2,0], [6,0]]],
-            '2': [[[0,8], [2,10], [6,10], [8,8], [8,2], [6,0], [0,0], [8,0]]],
-            '3': [[[0,10], [8,10], [8,2], [6,0], [2,0], [0,2]], [[2,5], [8,5]]],
-            '4': [[[6,0], [6,10]], [[0,4], [6,4], [8,0]]],
-            '5': [[[8,0], [0,0], [0,5], [2,10], [6,10], [8,8]]],
-            '6': [[[8,2], [6,0], [2,0], [0,2], [0,8], [2,10], [6,10], [8,8], [8,5], [0,5]]],
-            '7': [[[0,0], [8,0], [4,10]]],
-            '8': [[[4,0], [0,2], [0,8], [4,10], [8,8], [8,2], [4,0]], [[2,5], [6,5]]],
-            '9': [[[0,8], [2,10], [6,10], [8,8], [8,2], [6,0], [2,0], [0,2], [0,5], [8,5]]],
-            '-': [[[1,5], [7,5]]],
-            '/': [[[2,10], [6,0]]],
-            '.': [[[3.5,9], [4.5,9], [4.5,10], [3.5,10], [3.5,9]]],
+        const vectorFont = {
+            'A': [[[0,10],[4,0],[8,10]], [[2,5],[6,5]]],
+            'B': [[[0,10],[0,0],[5,0],[7,1],[7,4],[5,5],[0,5]], [[5,5],[7,6],[7,9],[5,10],[0,10]]],
+            'C': [[[8,2],[6,0],[2,0],[0,2],[0,8],[2,10],[6,10],[8,8]]],
+            'D': [[[0,10],[0,0],[5,0],[8,3],[8,7],[5,10],[0,10]]],
+            'E': [[[8,0],[0,0],[0,10],[8,10]], [[0,5],[5,5]]],
+            'F': [[[8,0],[0,0],[0,10]], [[0,5],[5,5]]],
+            'G': [[[8,2],[6,0],[2,0],[0,2],[0,8],[2,10],[6,10],[8,8],[8,5],[4,5]]],
+            'H': [[[0,0],[0,10]], [[8,0],[8,10]], [[0,5],[8,5]]],
+            'I': [[[4,0],[4,10]], [[2,0],[6,0]], [[2,10],[6,10]]],
+            'J': [[[8,0],[8,8],[6,10],[2,10],[0,8],[0,5]]],
+            'K': [[[0,0],[0,10]], [[8,0],[0,5]], [[3,6.8],[8,10]]],
+            'L': [[[0,0],[0,10],[8,10]]],
+            'M': [[[0,10],[0,0],[4,5],[8,0],[8,10]]],
+            'N': [[[0,10],[0,0],[8,10],[8,0]]],
+            'O': [[[2,0],[6,0],[8,2],[8,8],[6,10],[2,10],[0,8],[0,2],[2,0]]],
+            'P': [[[0,10],[0,0],[6,0],[8,2],[8,4],[6,6],[0,6]]],
+            'Q': [[[2,0],[6,0],[8,2],[8,8],[6,10],[2,10],[0,8],[0,2],[2,0]], [[5,7],[8,10]]],
+            'R': [[[0,10],[0,0],[6,0],[8,2],[8,4],[6,6],[0,6]], [[4,6],[8,10]]],
+            'S': [[[8,2],[6,0],[2,0],[0,2],[0,4],[2,5],[6,5],[8,6],[8,8],[6,10],[2,10],[0,8]]],
+            'T': [[[0,0],[8,0]], [[4,0],[4,10]]],
+            'U': [[[0,0],[0,8],[2,10],[6,10],[8,8],[8,0]]],
+            'V': [[[0,0],[4,10],[8,0]]],
+            'W': [[[0,0],[2,10],[4,5],[6,10],[8,0]]],
+            'X': [[[0,0],[8,10]], [[8,0],[0,10]]],
+            'Y': [[[0,0],[4,5],[8,0]], [[4,5],[4,10]]],
+            'Z': [[[0,0],[8,0],[0,10],[8,10]]],
+            '0': [[[2,0],[6,0],[8,2],[8,8],[6,10],[2,10],[0,8],[0,2],[2,0]], [[8,0],[0,10]]],
+            '1': [[[2,2],[4,0],[4,10]], [[2,10],[6,10]]],
+            '2': [[[0,2],[2,0],[6,0],[8,2],[8,4],[0,10],[8,10]]],
+            '3': [[[0,2],[2,0],[6,0],[8,2],[8,4],[5,5],[8,6],[8,8],[6,10],[2,10],[0,8]]],
+            '4': [[[6,10],[6,0],[0,6],[0,8],[8,8]]],
+            '5': [[[8,0],[0,0],[0,4],[6,4],[8,6],[8,8],[6,10],[2,10],[0,8]]],
+            '6': [[[8,2],[6,0],[2,0],[0,2],[0,8],[2,10],[6,10],[8,8],[8,6],[6,4],[0,4]]],
+            '7': [[[0,0],[8,0],[3,10]]],
+            '8': [[[2,0],[6,0],[8,2],[8,4],[6,5],[8,6],[8,8],[6,10],[2,10],[0,8],[0,6],[2,5],[0,4],[0,2],[2,0]], [[2,5],[6,5]]],
+            '9': [[[0,8],[2,10],[6,10],[8,8],[8,2],[6,0],[2,0],[0,2],[0,4],[2,6],[8,6]]],
+            '/': [[[1,10],[7,0]]],
+            '-': [[[1,5],[7,5]]],
+            '.': [[[3.5,9.5],[4.5,9.5],[4.5,10],[3.5,10],[3.5,9.5]]],
+            ',': [[[4,9],[5,9],[5,10],[3,12]]],
             ' ': []
         };
 
-        // =====================================================================
-        // 2. THE DRAWING ENGINE
-        // =====================================================================
-        function drawCadText(doc, text, startX, startY, height, thickness, spacebarDist) {
-            const letterSpacing = 1; // 1mm between letters
-            const width = height * 0.8; // Exact mathematical aspect ratio
-            const scale = height / 10; // Scales the 0-10 grid to physical mm
+        // Calculates exact physical width of text in mm (no invisible padding)
+        function getCadTextWidth(text, height, spaceDist) {
+            text = text.toUpperCase();
+            let w = 0;
+            let charW = height * 0.8;
+            let chars = text.split('');
+            for(let i = 0; i < chars.length; i++) {
+                if(chars[i] === ' ') {
+                    w += spaceDist;
+                } else {
+                    w += charW;
+                    if (i < chars.length - 1 && chars[i+1] !== ' ') {
+                        w += 1; // 1mm letter spacing
+                    }
+                }
+            }
+            return w;
+        }
+
+        // Draws the vector text to jsPDF
+        function drawCadText(doc, text, startX, startY, height) {
+            const spacebarDist = height === 10 ? 5 : 3;
+            const letterSpacing = 1; 
+            const scale = height / 10; 
             
-            doc.setLineWidth(thickness);
-            doc.setDrawColor(0, 0, 0);
-            
+            doc.setLineWidth(0.15); // Ultra-thin CAD stroke
             let currentX = startX;
             text = text.toUpperCase();
+            let chars = text.split('');
 
-            for (let i = 0; i < text.length; i++) {
-                let char = text[i];
-                
+            for (let i = 0; i < chars.length; i++) {
+                let char = chars[i];
                 if (char === ' ') {
                     currentX += spacebarDist;
                     continue;
                 }
-
-                if (cadFont[char]) {
-                    let paths = cadFont[char];
-                    paths.forEach(path => {
+                if (vectorFont[char]) {
+                    vectorFont[char].forEach(path => {
                         for (let j = 0; j < path.length - 1; j++) {
-                            let point1 = path[j];
-                            let point2 = path[j+1];
-                            
-                            // Map the 0-8 x 0-10 grid to physical mm coordinates
-                            // Note: PDF Y-axis goes DOWN, so we invert the Y calculation
-                            let x1 = currentX + (point1[0] * scale);
-                            let y1 = startY - (point1[1] * scale); 
-                            let x2 = currentX + (point2[0] * scale);
-                            let y2 = startY - (point2[1] * scale); 
-                            
+                            let x1 = currentX + (path[j][0] * scale);
+                            let y1 = startY + (path[j][1] * scale);
+                            let x2 = currentX + (path[j+1][0] * scale);
+                            let y2 = startY + (path[j+1][1] * scale);
                             doc.line(x1, y1, x2, y2);
                         }
                     });
                 }
+                currentX += (height * 0.8);
+                if (i < chars.length - 1 && chars[i+1] !== ' ') {
+                    currentX += letterSpacing;
+                }
+            }
+        }
+
+        // =====================================================================
+        // 2. PDF GENERATION & LAYOUT LOGIC
+        // =====================================================================
+        function generatePDF(isDownload = false) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+            const borderMarg = 12;
+            const pageWidth = 210;
+            const pageHeight = 297;
+
+            // 1. Draw Page Border
+            doc.setLineWidth(0.5);
+            doc.rect(borderMarg, borderMarg, pageWidth - (borderMarg*2), pageHeight - (borderMarg*2));
+
+            // 2. Collect Bottom-Right Details (skip empty)
+            const inputs = [
+                document.getElementById('nameInput').value,
+                document.getElementById('eNumInput').value,
+                document.getElementById('groupInput').value,
+                document.getElementById('semInput').value,
+                document.getElementById('dateInput').value
+            ].filter(val => val.trim() !== '');
+
+            let topOfNameBlock = pageHeight - borderMarg; // Default if empty
+
+            if(inputs.length > 0) {
+                const heights = inputs.map((_, i) => i === 0 ? 5 : 4);
                 
-                // Advance the X coordinate for the next letter
-                currentX += width + letterSpacing;
-            }
-            
-            return currentX; // Returns the end position
-        }
+                // Calculate max width for X alignment
+                let maxWidth = 0;
+                inputs.forEach((text, i) => {
+                    const w = getCadTextWidth(text, heights[i], 3);
+                    if(w > maxWidth) maxWidth = w;
+                });
 
-        // Helper to calculate exact ink width for layout centering
-        function getCadTextWidth(text, height, spacebarDist = 3) {
-            const letterSpacing = 1;
-            const width = height * 0.8;
-            let totalWidth = 0;
-            const cleanText = text.toUpperCase();
-            
-            for (let i = 0; i < cleanText.length; i++) {
-                if (cleanText[i] === ' ') {
-                    totalWidth += spacebarDist;
-                } else {
-                    totalWidth += width + letterSpacing;
-                }
-            }
-            
-            // Remove the last letter's trailing letterSpacing to get exact bounding width
-            const lastChar = cleanText.trim().slice(-1);
-            if (lastChar && lastChar !== ' ') {
-                totalWidth -= letterSpacing;
-            }
-            return Math.max(0, totalWidth);
-        }
+                // X Alignment: End of longest line is 10mm from right border (198mm)
+                const startX = 198 - maxWidth;
 
-        // =====================================================================
-        // 3. LAYOUT & GENERATION LOGIC
-        // =====================================================================
-        const inputs = {
-            title: document.getElementById('title'),
-            name: document.getElementById('name'),
-            eNumber: document.getElementById('eNumber'),
-            group: document.getElementById('group'),
-            semester: document.getElementById('semester'),
-            date: document.getElementById('date')
-        };
+                // Y Alignment: Bottom underline is 15mm from bottom border (285mm) -> Y = 270
+                let currentY = 270;
+                
+                // Draw from bottom to top
+                for(let i = inputs.length - 1; i >= 0; i--) {
+                    const text = inputs[i];
+                    const h = heights[i];
+                    const w = getCadTextWidth(text, h, 3);
+                    
+                    // Draw Underline (currentY is the underline position)
+                    doc.setLineWidth(0.3);
+                    doc.line(startX, currentY, startX + w, currentY);
+                    
+                    // Text top is 1mm (underline gap) + h (height) above underline
+                    const textY = currentY - 1 - h; 
+                    drawCadText(doc, text, startX, textY, h);
 
-        inputs.date.valueAsDate = new Date();
-        Object.values(inputs).forEach(input => input.addEventListener('input', updatePreview));
-        updatePreview();
+                    // Track top of Name block for Title centering
+                    if(i === 0) topOfNameBlock = textY;
 
-        function getFormData() {
-            return {
-                title: inputs.title.value.toUpperCase() || 'TITLE OF EXPERIMENT',
-                name: inputs.name.value.trim().toUpperCase(),
-                eNumber: inputs.eNumber.value.trim().toUpperCase(),
-                group: inputs.group.value.trim().toUpperCase(),
-                semester: inputs.semester.value.trim().toUpperCase(),
-                date: inputs.date.value ? new Date(inputs.date.value).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '/') : ''
-            };
-        }
-
-        function calculateLayout(data) {
-            const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-
-            const items = [];
-            // Height, Thickness, Spacebar Distance
-            if (data.name) items.push({ id: 'name', text: data.name, height: 5, thickness: 0.4, spacebar: 3 });
-            if (data.eNumber) items.push({ id: 'eNumber', text: data.eNumber, height: 4, thickness: 0.4, spacebar: 3 });
-            if (data.group) items.push({ id: 'group', text: data.group, height: 4, thickness: 0.4, spacebar: 3 });
-            if (data.semester) items.push({ id: 'semester', text: data.semester, height: 4, thickness: 0.4, spacebar: 3 });
-            if (data.date) items.push({ id: 'date', text: data.date, height: 4, thickness: 0.4, spacebar: 3 });
-
-            let maxWidth = 0;
-            items.forEach(item => {
-                item.width = getCadTextWidth(item.text, item.height, item.spacebar);
-                if (item.width > maxWidth) maxWidth = item.width;
-            });
-
-            const rightBorderX = 198;
-            const endX = rightBorderX - 10;
-            const startX = endX - maxWidth;
-
-            if (items.length > 0) {
-                for (let i = items.length - 1; i >= 0; i--) {
-                    const item = items[i];
-                    if (i === items.length - 1) {
-                        item.underlineY = 270; // 15mm above bottom border
-                    } else {
-                        const nextItem = items[i + 1];
-                        item.underlineY = (nextItem.baselineY - nextItem.height) - 3;
+                    // Move up for next item: 3mm gap + h + 1mm underline gap = h + 4
+                    if (i > 0) {
+                        currentY = currentY - h - 4; 
                     }
-                    item.baselineY = item.underlineY - 1; // 1mm below text
-                    item.topY = item.baselineY - item.height;
-                    item.x = startX;
                 }
             }
 
-            const targetTopY = items.length > 0 ? items[0].topY : 250;
+            // 3. Title Block
+            const titleText = document.getElementById('titleInput').value.trim();
+            if(titleText) {
+                const titleHeight = 10;
+                const maxTitleWidth = pageWidth - 25 - 25; // 160mm
+                
+                // Split by newline first (user pressing Enter), then wrap if needed
+                let rawLines = titleText.split('\n').map(l => l.trim()).filter(l => l !== '');
+                if (rawLines.length === 0) rawLines = ['TITLE OF EXPERIMENT'];
 
-            // Title Block
-            const rawTitleLines = data.title.split('\n').map(l => l.trim()).filter(l => l !== '');
-            const titleLines = [];
-            
-            rawTitleLines.forEach(lineText => {
-                const lineWidth = getCadTextWidth(lineText, 10, 5);
-                titleLines.push({ text: lineText, width: lineWidth });
-            });
+                let lines = [];
+                rawLines.forEach(rawLine => {
+                    let words = rawLine.split(' ');
+                    let currentLine = "";
+                    words.forEach(word => {
+                        let testLine = currentLine + (currentLine ? " " : "") + word;
+                        if(getCadTextWidth(testLine, titleHeight, 5) > maxTitleWidth && currentLine !== "") {
+                            lines.push(currentLine);
+                            currentLine = word;
+                        } else {
+                            currentLine = testLine;
+                        }
+                    });
+                    if(currentLine) lines.push(currentLine);
+                });
 
-            if (titleLines.length === 0) {
-                titleLines.push({ text: 'TITLE OF EXPERIMENT', width: getCadTextWidth('TITLE OF EXPERIMENT', 10, 5) });
+                // Y Centering Calculation
+                const availableSpace = topOfNameBlock - borderMarg;
+                // Total height: (lines * 10mm) + (lines * 1mm underline) + ((lines-1) * 5mm gap)
+                const totalTitleBlockHeight = (lines.length * 11) + ((lines.length - 1) * 5);
+                
+                let startY = borderMarg + (availableSpace / 2) - (totalTitleBlockHeight / 2);
+
+                lines.forEach((line) => {
+                    const lineW = getCadTextWidth(line, titleHeight, 5);
+                    // ALWAYS center horizontally, as per your requirement
+                    const lineX = (pageWidth / 2) - (lineW / 2); 
+                    
+                    drawCadText(doc, line, lineX, startY, titleHeight);
+                    
+                    // Draw underline (1mm below text)
+                    doc.setLineWidth(0.3);
+                    doc.line(lineX, startY + titleHeight + 1, lineX + lineW, startY + titleHeight + 1);
+                    
+                    // Move down for next line (10mm height + 1mm ul + 5mm gap)
+                    startY += 16;
+                });
             }
 
-            const numLines = titleLines.length;
-            const titleBlockHeight = (numLines * 11) + ((numLines - 1) * 5);
-            
-            const midY = (12 + targetTopY) / 2;
-            const titleBlockTopY = midY - (titleBlockHeight / 2);
-
-            let currentY = titleBlockTopY;
-            titleLines.forEach((line, index) => {
-                line.topY = currentY;
-                line.baselineY = currentY + 10;
-                line.underlineY = currentY + 11;
-                line.x = (210 - line.width) / 2; // Centered horizontally
-                currentY = line.underlineY + 5;
-            });
-
-            return { items, titleLines };
+            // Output handling
+            if(isDownload) {
+                doc.save('Cover_Page.pdf');
+            } else {
+                document.getElementById('pdfPreview').src = doc.output('datauristring');
+            }
         }
 
-        function updatePreview() {
-            const data = getFormData();
-            const layout = calculateLayout(data);
-            const container = document.getElementById('previewContent');
-            container.innerHTML = '';
+        // Live preview listeners
+        document.querySelectorAll('input, textarea').forEach(input => {
+            input.addEventListener('input', () => generatePDF(false));
+        });
 
-            layout.titleLines.forEach(line => {
-                const el = document.createElement('div');
-                el.className = 'pdf-text text-title';
-                el.textContent = line.text;
-                el.style.left = line.x + 'mm';
-                el.style.top = line.topY + 'mm';
-                container.appendChild(el);
-            });
-
-            layout.items.forEach(item => {
-                const el = document.createElement('div');
-                el.className = `pdf-text ${item.id === 'name' ? 'text-name' : 'text-detail'}`;
-                el.textContent = item.text;
-                el.style.left = item.x + 'mm';
-                el.style.top = item.topY + 'mm';
-                container.appendChild(el);
-            });
-        }
-
-        async function generatePDF() {
+        document.getElementById('downloadBtn').addEventListener('click', () => {
             const btn = document.getElementById('downloadBtn');
             btn.disabled = true;
-            btn.innerHTML = 'Generating...';
-
+            btn.textContent = 'Generating...';
             setTimeout(() => {
-                const data = getFormData();
-                const layout = calculateLayout(data);
-                const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-                doc.setDrawColor(0, 0, 0);
-                doc.setTextColor(0, 0, 0);
-
-                // Draw Border
-                doc.setLineWidth(0.8);
-                doc.rect(12, 12, 186, 273);
-
-                // Draw Title using CAD Engine
-                layout.titleLines.forEach(line => {
-                    drawCadText(doc, line.text, line.x, line.baselineY, 10, 0.5, 5);
-                    doc.setLineWidth(0.5);
-                    doc.line(line.x, line.underlineY, line.x + line.width, line.underlineY);
-                });
-
-                // Draw Details using CAD Engine
-                layout.items.forEach(item => {
-                    drawCadText(doc, item.text, item.x, item.baselineY, item.height, 0.4, item.spacebar);
-                    doc.setLineWidth(0.4);
-                    doc.line(item.x, item.underlineY, item.x + item.width, item.underlineY);
-                });
-
-                const safeName = data.name.replace(/[^a-zA-Z0-9]/g, '_') || 'CoverPage';
-                doc.save(`${safeName}_CoverPage.pdf`);
-
+                generatePDF(true);
                 btn.disabled = false;
-                btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Download PDF`;
+                btn.textContent = 'Download A4 PDF';
             }, 100);
-        }
+        });
+
+        // Initial render
+        window.onload = () => generatePDF(false);
     </script>
 </body>
 </html>
