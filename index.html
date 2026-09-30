@@ -3,98 +3,433 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cover Page Designer</title>
-    <link rel="stylesheet" href="style.css">
-    <!-- html2pdf library for perfect A4 PDF export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <title>A4 Cover Page Generator</title>
+    <!-- jsPDF CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        /* 
+         * FONT SETUP 
+         * Replace 'Rhino-Single-Line.ttf' with your actual local font file path.
+         */
+        @font-face {
+            font-family: 'Rhino';
+            src: url('Rhino-Single-Line.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        :root {
+            --bg-color: #f3f4f6;
+            --panel-bg: #ffffff;
+            --border-color: #d1d5db;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: #1f2937;
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* --- Left Panel: Form --- */
+        .form-panel {
+            width: 380px;
+            background: var(--panel-bg);
+            border-right: 1px solid var(--border-color);
+            padding: 30px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.05);
+            z-index: 10;
+        }
+
+        .form-panel h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 10px; }
+        .form-panel p { font-size: 0.875rem; color: #6b7280; margin-bottom: 20px; }
+
+        .input-group { display: flex; flex-direction: column; gap: 6px; }
+        .input-group label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #4b5563; }
+        .input-group input {
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.95rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .btn-download {
+            margin-top: 20px;
+            padding: 12px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-download:hover { background-color: var(--primary-hover); }
+
+        /* --- Right Panel: Preview --- */
+        .preview-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            overflow: auto;
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .preview-header {
+            position: absolute;
+            top: 20px;
+            right: 40px;
+            background: rgba(255,255,255,0.9);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #6b7280;
+            border: 1px solid var(--border-color);
+        }
+
+        /* A4 Page Container */
+        .a4-page {
+            width: 210mm;
+            height: 297mm;
+            background: white;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            flex-shrink: 0;
+            /* Scale down for smaller screens while maintaining mm proportions */
+            transform-origin: top center;
+        }
+
+        /* Responsive scaling for the preview */
+        @media (max-height: 900px) { .a4-page { transform: scale(0.85); margin-top: -40mm; } }
+        @media (max-height: 750px) { .a4-page { transform: scale(0.7); margin-top: -80mm; } }
+        @media (max-width: 900px) { 
+            body { flex-direction: column; overflow: auto; } 
+            .form-panel { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border-color); }
+            .preview-panel { padding: 20px; }
+            .a4-page { transform: scale(0.5); margin-top: -140mm; margin-bottom: -140mm; }
+        }
+
+        /* --- PDF Elements Styling (Matches jsPDF logic) --- */
+        .frame-border {
+            position: absolute;
+            top: 12mm;
+            left: 12mm;
+            width: 186mm; /* 210 - 24 */
+            height: 273mm; /* 297 - 24 */
+            border: 1.5px solid #000;
+            pointer-events: none;
+        }
+
+        .pdf-text {
+            position: absolute;
+            white-space: nowrap;
+            font-family: 'Rhino', 'Helvetica Neue', Helvetica, Arial, sans-serif; /* Fallback for preview */
+            color: #000;
+            line-height: 1;
+        }
+
+        .pdf-text::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 0.5px; /* Visual representation of 1mm in CSS context */
+            background-color: #000;
+        }
+
+        /* Specific adjustments to match the 1mm baseline rule visually in CSS */
+        .text-name { font-size: 5mm; }
+        .text-name::after { bottom: -1mm; }
+        
+        .text-detail { font-size: 4mm; }
+        .text-detail::after { bottom: -1mm; }
+
+        .text-title { font-size: 10mm; font-weight: normal; }
+        .text-title::after { bottom: -1mm; }
+
+    </style>
 </head>
 <body>
-    <div class="app-container">
-        <!-- Left Side: Input Form -->
-        <div class="form-panel">
-            <div class="form-header">
-                <h2>Cover Page Designer</h2>
-                <p>Fill in the details to generate your A4 cover page.</p>
-            </div>
-            
-            <form id="coverForm" onsubmit="return false;">
-                <div class="input-group">
-                    <label>Course Code</label>
-                    <input type="text" id="courseCode" placeholder="e.g., ME3020">
-                </div>
 
-                <div class="input-group">
-                    <label>Title of Experiment *</label>
-                    <input type="text" id="title" required placeholder="e.g., INSTRUMENTATION">
-                </div>
-
-                <div class="input-group">
-                    <label>Full Name *</label>
-                    <input type="text" id="name" required placeholder="e.g., PULLE D.S.C.F.">
-                </div>
-
-                <div class="input-group">
-                    <label>Registration Number (E-Number) *</label>
-                    <input type="text" id="regNumber" required placeholder="e.g., E/23/281">
-                    <!-- NO VALIDATION BLOCKER HERE - ANYONE CAN TYPE ANYTHING -->
-                </div>
-
-                <div class="input-group">
-                    <label>Group Number *</label>
-                    <input type="text" id="groupNumber" required placeholder="e.g., GROUP B6">
-                </div>
-
-                <div class="input-group">
-                    <label>Semester *</label>
-                    <input type="text" id="semester" required placeholder="e.g., SEMESTER CS I">
-                </div>
-
-                <div class="input-group">
-                    <label>Date *</label>
-                    <input type="date" id="date" required>
-                </div>
-
-                <button type="button" class="btn-download" onclick="downloadPDF()">
-                    📥 Download as PDF
-                </button>
-            </form>
+    <!-- LEFT PANEL: FORM -->
+    <div class="form-panel">
+        <div>
+            <h2>Cover Page Designer</h2>
+            <p>Fill in the details. Empty fields (except Title) will be automatically skipped in the layout.</p>
         </div>
 
-        <!-- Right Side: Live A4 Preview -->
-        <div class="preview-panel">
-            <div class="preview-header">
-                <h3>Live Preview</h3>
+        <form id="coverForm">
+            <div class="input-group">
+                <label for="title">Title of Experiment *</label>
+                <input type="text" id="title" placeholder="e.g., MECHANICS OF VIBRATIONS" required>
             </div>
-            <div class="preview-wrapper">
-                <div id="coverPage" class="a4-page">
-                    <!-- Outer Frame -->
-                    <div class="outer-frame"></div>
-                    
-                    <div class="page-content">
-                        <!-- Course Code (Top Center) -->
-                        <div class="course-code-box">
-                            <span id="outCourseCode"></span>
-                        </div>
+            <div class="input-group">
+                <label for="name">Name</label>
+                <input type="text" id="name" placeholder="e.g., PERERA A.B.C.">
+            </div>
+            <div class="input-group">
+                <label for="eNumber">E Number</label>
+                <input type="text" id="eNumber" placeholder="e.g., E/20/123">
+            </div>
+            <div class="input-group">
+                <label for="group">Group Number</label>
+                <input type="text" id="group" placeholder="e.g., GROUP 04">
+            </div>
+            <div class="input-group">
+                <label for="semester">Semester</label>
+                <input type="text" id="semester" placeholder="e.g., SEMESTER 3">
+            </div>
+            <div class="input-group">
+                <label for="date">Date</label>
+                <input type="date" id="date">
+            </div>
 
-                        <!-- Title (Centered Vertically & Horizontally) -->
-                        <div class="title-box">
-                            <h1 id="outTitle">TITLE OF EXPERIMENT</h1>
-                        </div>
-                        
-                        <!-- Details (Bottom Right) -->
-                        <div class="details-box">
-                            <p id="outName">NAME</p>
-                            <p id="outRegNumber">REG. NO.</p>
-                            <p id="outGroupNumber">GROUP NO.</p>
-                            <p id="outSemester">SEMESTER</p>
-                            <p id="outDate">DATE</p>
-                        </div>
-                    </div each>
-                </div>
+            <button type="button" class="btn-download" onclick="generatePDF()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Download PDF
+            </button>
+        </form>
+    </div>
+
+    <!-- RIGHT PANEL: LIVE PREVIEW -->
+    <div class="preview-panel">
+        <div class="preview-header">Live A4 Preview</div>
+        <div class="a4-page" id="a4Page">
+            <div class="frame-border"></div>
+            <div id="previewContent">
+                <!-- Dynamically populated by JS -->
             </div>
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script>
+        const { jsPDF } = window.jspdf;
+
+        // Form elements
+        const inputs = {
+            title: document.getElementById('title'),
+            name: document.getElementById('name'),
+            eNumber: document.getElementById('eNumber'),
+            group: document.getElementById('group'),
+            semester: document.getElementById('semester'),
+            date: document.getElementById('date')
+        };
+
+        // Set default date to today
+        inputs.date.valueAsDate = new Date();
+
+        // Listen for changes to update live preview
+        Object.values(inputs).forEach(input => {
+            input.addEventListener('input', updatePreview);
+        });
+
+        // Initial render
+        updatePreview();
+
+        function getFormData() {
+            return {
+                title: inputs.title.value.trim().toUpperCase() || 'TITLE OF EXPERIMENT',
+                name: inputs.name.value.trim().toUpperCase(),
+                eNumber: inputs.eNumber.value.trim().toUpperCase(),
+                group: inputs.group.value.trim().toUpperCase(),
+                semester: inputs.semester.value.trim().toUpperCase(),
+                date: inputs.date.value ? new Date(inputs.date.value).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '/') : ''
+            };
+        }
+
+        function calculateLayout(data) {
+            // Initialize a mock jsPDF instance purely for text measurement
+            const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+            
+            // NOTE: To use your exact Rhino font, uncomment and configure these lines:
+            // const rhinoBase64 = "AAEAAAARAQA..."; // Your base64 encoded Rhino-Single-Line.ttf
+            // doc.addFileToVFS('Rhino.ttf', rhinoBase64);
+            // doc.addFont('Rhino.ttf', 'Rhino', 'normal');
+            // doc.setFont('Rhino');
+            
+            // Fallback for measurement (ensure your local CSS @font-face matches this metric closely)
+            doc.setFont('helvetica', 'normal'); 
+
+            // 1. Filter valid bottom-right items
+            const items = [];
+            if (data.name) items.push({ id: 'name', text: data.name, height: 5 });
+            if (data.eNumber) items.push({ id: 'eNumber', text: data.eNumber, height: 4 });
+            if (data.group) items.push({ id: 'group', text: data.group, height: 4 });
+            if (data.semester) items.push({ id: 'semester', text: data.semester, height: 4 });
+            if (data.date) items.push({ id: 'date', text: data.date, height: 4 });
+
+            // 2. Calculate X-Axis (Right Alignment Logic)
+            let maxWidth = 0;
+            items.forEach(item => {
+                item.width = doc.getTextWidth(item.text);
+                if (item.width > maxWidth) maxWidth = item.width;
+            });
+
+            // Right page border is at 198mm. 10mm to the left = 188mm.
+            const startX = 188 - maxWidth;
+
+            // 3. Calculate Y-Axis (Bottom-Up Anchoring)
+            // Last item underline must be 15mm above bottom page border (285mm). So, 270mm.
+            if (items.length > 0) {
+                for (let i = items.length - 1; i >= 0; i--) {
+                    const item = items[i];
+                    if (i === items.length - 1) {
+                        item.underlineY = 270;
+                    } else {
+                        const nextItem = items[i + 1];
+                        // Distance between underline of top item and top of text of item below = 3mm
+                        // topY of next item = baselineY - height
+                        item.underlineY = (nextItem.baselineY - nextItem.height) - 3;
+                    }
+                    item.baselineY = item.underlineY - 1; // Underline is 1mm below baseline
+                    item.topY = item.baselineY - item.height;
+                    item.x = startX;
+                }
+            }
+
+            const targetTopY = items.length > 0 ? items[0].topY : 285; // Fallback if no details
+
+            // 4. Title Block Calculation
+            const titleWidth = doc.getTextWidth(data.title);
+            let titleLines = [];
+
+            if (titleWidth <= 160) {
+                titleLines = [{ text: data.title, width: titleWidth }];
+            } else {
+                // Split into exactly two lines at the nearest space to the middle
+                const mid = Math.floor(data.title.length / 2);
+                let splitIndex = data.title.lastIndexOf(' ', mid);
+                if (splitIndex === -1 || splitIndex === 0) splitIndex = mid; // Fallback
+                
+                const line1 = data.title.substring(0, splitIndex).trim();
+                const line2 = data.title.substring(splitIndex).trim();
+                titleLines = [
+                    { text: line1, width: doc.getTextWidth(line1) },
+                    { text: line2, width: doc.getTextWidth(line2) }
+                ];
+            }
+
+            const titleBlockHeight = titleLines.length === 1 ? (10 + 1) : (10 + 1 + 5 + 10 + 1); // 11mm or 27mm
+            
+            // Vertically center between top border (12mm) and targetTopY
+            const midY = (12 + targetTopY) / 2;
+            const titleTopY = midY - (titleBlockHeight / 2);
+
+            let currentY = titleTopY;
+            titleLines.forEach((line, index) => {
+                line.topY = currentY;
+                line.baselineY = currentY + 10;
+                line.underlineY = line.baselineY + 1;
+                // Perfectly centered horizontally on the 210mm page
+                line.x = (210 - line.width) / 2; 
+                
+                if (index === 0 && titleLines.length === 2) {
+                    currentY = line.underlineY + 5; // 5mm gap to top of next line's text
+                }
+            });
+
+            return { items, titleLines };
+        }
+
+        function updatePreview() {
+            const data = getFormData();
+            const layout = calculateLayout(data);
+            const container = document.getElementById('previewContent');
+            container.innerHTML = ''; // Clear previous
+
+            // Render Title
+            layout.titleLines.forEach(line => {
+                const el = document.createElement('div');
+                el.className = 'pdf-text text-title';
+                el.textContent = line.text;
+                el.style.left = line.x + 'mm';
+                el.style.top = line.topY + 'mm';
+                el.style.width = line.width + 'mm';
+                container.appendChild(el);
+            });
+
+            // Render Details
+            layout.items.forEach(item => {
+                const el = document.createElement('div');
+                el.className = `pdf-text ${item.id === 'name' ? 'text-name' : 'text-detail'}`;
+                el.textContent = item.text;
+                el.style.left = item.x + 'mm';
+                el.style.top = item.topY + 'mm';
+                el.style.width = item.width + 'mm';
+                container.appendChild(el);
+            });
+        }
+
+        function generatePDF() {
+            const data = getFormData();
+            const layout = calculateLayout(data);
+            
+            const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+            
+            // TODO: ADD CUSTOM FONT HERE FOR FINAL OUTPUT
+            // const rhinoBase64 = "YOUR_BASE64_STRING_HERE";
+            // doc.addFileToVFS('Rhino.ttf', rhinoBase64);
+            // doc.addFont('Rhino.ttf', 'Rhino', 'normal');
+            // doc.setFont('Rhino');
+            
+            doc.setFont('helvetica', 'normal'); // Fallback
+            doc.setTextColor(0, 0, 0);
+
+            // 1. Draw Page Border (12mm from all edges)
+            doc.setLineWidth(0.5);
+            doc.rect(12, 12, 186, 273);
+
+            // Helper to draw text with exact 1mm underline
+            const drawTextWithUnderline = (text, x, baselineY, fontSize) => {
+                doc.setFontSize(fontSize);
+                doc.text(text, x, baselineY);
+                
+                // Draw underline exactly 1mm below baseline
+                const textWidth = doc.getTextWidth(text);
+                doc.setLineWidth(0.3); // ~0.1mm visual weight
+                doc.line(x, baselineY + 1, x + textWidth, baselineY + 1);
+            };
+
+            // 2. Draw Title
+            layout.titleLines.forEach(line => {
+                drawTextWithUnderline(line.text, line.x, line.baselineY, 10);
+            });
+
+            // 3. Draw Details
+            layout.items.forEach(item => {
+                drawTextWithUnderline(item.text, item.x, item.baselineY, item.height);
+            });
+
+            // Save
+            const safeName = data.name.replace(/[^a-zA-Z0-9]/g, '_') || 'CoverPage';
+            doc.save(`${safeName}_CoverPage.pdf`);
+        }
+    </script>
 </body>
 </html>
