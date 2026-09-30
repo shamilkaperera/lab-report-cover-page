@@ -6,10 +6,10 @@
     <title>A4 Cover Page Generator - Helvetica Thin</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        /* Load font with cache-busting */
+        /* FONT LOADING - Multiple formats for better compatibility */
         @font-face {
             font-family: 'HelveticaThin';
-            src: url('./Helvetica-Thin.ttf?v=2') format('truetype');
+            src: url('./Helvetica-Thin.ttf?v=3') format('truetype');
             font-weight: 100;
             font-style: normal;
             font-display: swap;
@@ -160,14 +160,16 @@
             pointer-events: none;
         }
 
-        /* ULTRA-THIN FONT STYLING */
+        /* FORCE THIN FONT WITH !important */
         .pdf-text {
             position: absolute;
             white-space: pre;
-            font-family: 'HelveticaThin', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
-            font-weight: 100 !important; /* Ultra-thin */
+            font-family: 'HelveticaThin' !important;
+            font-weight: 100 !important;
+            font-stretch: ultra-condensed;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
             color: #000;
             line-height: 1;
         }
@@ -181,18 +183,31 @@
             background-color: #000;
         }
 
-        .text-name { font-size: 5mm; }
+        .text-name { font-size: 5mm !important; }
         .text-name::after { bottom: -1mm; }
         
-        .text-detail { font-size: 4mm; }
+        .text-detail { font-size: 4mm !important; }
         .text-detail::after { bottom: -1mm; }
 
-        .text-title { font-size: 10mm; }
+        .text-title { font-size: 10mm !important; }
         .text-title::after { bottom: -1mm; }
+
+        /* Font test element - hidden but used to verify font loads */
+        #fontTest {
+            position: absolute;
+            top: -9999px;
+            left: -9999px;
+            font-family: 'HelveticaThin';
+            font-size: 100px;
+            visibility: hidden;
+        }
 
     </style>
 </head>
 <body>
+
+    <!-- Hidden font test element -->
+    <div id="fontTest">TEST</div>
 
     <div class="form-panel">
         <div>
@@ -250,25 +265,32 @@
 
         let activeFontName = 'helvetica';
         let fontReady = false;
-        let fontLoaded = false;
+        let cssFontLoaded = false;
 
         function updateFontStatus(status, message) {
             const statusEl = document.getElementById('fontStatus');
             if(!statusEl) return;
             statusEl.className = `font-status ${status}`;
-            const icons = { loading: '', success: '✓', error: '' };
+            const icons = { loading: '⏳', success: '✓', error: '✗' };
             statusEl.innerHTML = `<span>${icons[status]}</span> ${message}`;
         }
 
-        // Check if font actually loaded in browser
-        document.fonts.ready.then(() => {
-            const fontLoaded = document.fonts.check('100 12px "HelveticaThin"');
-            if (fontLoaded) {
-                console.log('✓ HelveticaThin font is available in browser');
-            } else {
-                console.warn(' HelveticaThin font NOT loaded. Using fallback.');
+        // Check if CSS font actually loaded in browser
+        async function checkCSSFont() {
+            try {
+                await document.fonts.load('100 12px "HelveticaThin"');
+                const isLoaded = document.fonts.check('100 12px "HelveticaThin"');
+                
+                if (isLoaded) {
+                    cssFontLoaded = true;
+                    console.log('✓ CSS font HelveticaThin is loaded in browser');
+                } else {
+                    console.warn(' CSS font HelveticaThin NOT loaded. Font file may not be browser-compatible.');
+                }
+            } catch (e) {
+                console.warn('⚠ CSS font check failed:', e);
             }
-        });
+        }
 
         async function loadCustomFont() {
             try {
@@ -299,8 +321,12 @@
                 
                 activeFontName = 'HelveticaThin';
                 fontReady = true;
-                fontLoaded = true;
-                updateFontStatus('success', `Helvetica-Thin loaded (${(bytes.length / 1024).toFixed(1)} KB)`);
+                
+                // Check CSS font too
+                await checkCSSFont();
+                
+                const cssStatus = cssFontLoaded ? '(Preview: ✓)' : '(Preview: Using fallback - PDF will use custom font)';
+                updateFontStatus('success', `Helvetica-Thin loaded (${(bytes.length / 1024).toFixed(1)} KB) ${cssStatus}`);
                 console.log('✓ Helvetica-Thin font loaded for PDF');
                 
             } catch (error) {
