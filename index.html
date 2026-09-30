@@ -148,38 +148,39 @@
 
     <script>
         // =====================================================================
-        // 1. PERFECTED Simplex Vector Font Engine
-        // Grid: X from 0 to 8, Y from 0 to 10. Width = Height * 0.8 (except 'I')
+        // 1. PERFECTED Simplex Vector Font Engine (Hybrid Squircle Update)
+        // Grid: X from 0 to 8, Y from 0 to 10. Width = Height * 0.8
+        // 'I' and '1' have ZERO width (single vertical line only)
         // =====================================================================
         const vectorFont = {
             'A': [[[0,10],[4,0],[8,10]], [[2,5],[6,5]]],
             'B': [[[0,10], [0,0], [4,0], [5.5,0.2], [6.8,0.75], [7.7,1.55], [8,2.5], [7.7,3.45], [6.8,4.25], [5.5,4.8], [4,5], [5.5,5.2], [6.8,5.75], [7.7,6.55], [8,7.5], [7.7,8.45], [6.8,9.25], [5.5,9.8], [4,10], [0,10]], [[0,5], [4,5]]],
-            'C': [[[7.7,3.1], [6.8,1.5], [5.5,0.4], [4,0], [2.5,0.4], [1.2,1.5], [0.3,3.1], [0,5], [0.3,6.9], [1.2,8.5], [2.5,9.6], [4,10], [5.5,9.6], [6.8,8.5], [7.7,6.9]]],
+            'C': [[[8,2.5], [6.5,0.5], [4,0], [1.5,0.5], [0,2.5], [0,7.5], [1.5,9.5], [4,10], [6.5,9.5], [8,7.5]]], // Hybrid squircle shape
             'D': [[[0,10], [0,0], [4,0], [5.5,0.4], [6.8,1.5], [7.7,3.1], [8,5], [7.7,6.9], [6.8,8.5], [5.5,9.6], [4,10], [0,10]]],
             'E': [[[8,0],[0,0],[0,10],[8,10]], [[0,5],[5.5,5]]],
             'F': [[[8,0],[0,0],[0,10]], [[0,5],[5.5,5]]],
-            'G': [[[7.7,3.1], [6.8,1.5], [5.5,0.4], [4,0], [2.5,0.4], [1.2,1.5], [0.3,3.1], [0,5], [0.3,6.9], [1.2,8.5], [2.5,9.6], [4,10], [5.5,9.6], [6.8,8.5], [7.7,6.9], [7.7,5], [4,5]]],
+            'G': [[[8,3], [7.5,1.5], [6.5,0.5], [4,0], [1.5,0.5], [0,2.5], [0,7.5], [1.5,9.5], [4,10], [6.5,9.5], [8,7.5], [8,5], [4,5]]], // Hybrid squircle shape
             'H': [[[0,0],[0,10]], [[8,0],[8,10]], [[0,5],[8,5]]],
-            'I': [[[0,0],[0,10]]], 
+            'I': [[[0,0],[0,10]]], // Zero width - single vertical line
             'J': [[[8,0], [8,6], [7.7,7.5], [6.8,8.8], [5.5,9.7], [4,10], [2.5,9.7], [1.2,8.8], [0.3,7.5], [0,5]]],
             'K': [[[0,0],[0,10]], [[8,0],[0,5]], [[8,10],[0,5]]],
             'L': [[[0,0],[0,10],[8,10]]],
-            'M': [[[0,10],[0,0],[4,10],[8,0],[8,10]]], 
+            'M': [[[0,10],[0,0],[4,10],[8,0],[8,10]]],
             'N': [[[0,10],[0,0],[8,10],[8,0]]],
-            'O': [[[4,0], [5.5,0.4], [6.8,1.5], [7.7,3.1], [8,5], [7.7,6.9], [6.8,8.5], [5.5,9.6], [4,10], [2.5,9.6], [1.2,8.5], [0.3,6.9], [0,5], [0.3,3.1], [1.2,1.5], [2.5,0.4], [4,0]]],
+            'O': [[[4,0], [6.5,0.5], [8,2.5], [8,7.5], [6.5,9.5], [4,10], [1.5,9.5], [0,7.5], [0,2.5], [1.5,0.5], [4,0]]], // Hybrid squircle shape
             'P': [[[0,10], [0,0], [4,0], [5.5,0.2], [6.8,0.75], [7.7,1.55], [8,2.5], [7.7,3.45], [6.8,4.25], [5.5,4.8], [4,5], [0,5]]],
-            'Q': [[[4,0], [5.5,0.4], [6.8,1.5], [7.7,3.1], [8,5], [7.7,6.9], [6.8,8.5], [5.5,9.6], [4,10], [2.5,9.6], [1.2,8.5], [0.3,6.9], [0,5], [0.3,3.1], [1.2,1.5], [2.5,0.4], [4,0]], [[5,7.5], [8,10]]],
+            'Q': [[[4,0], [6.5,0.5], [8,2.5], [8,7.5], [6.5,9.5], [4,10], [1.5,9.5], [0,7.5], [0,2.5], [1.5,0.5], [4,0]], [[5,7.5], [8,10]]],
             'R': [[[0,10], [0,0], [4,0], [5.5,0.2], [6.8,0.75], [7.7,1.55], [8,2.5], [7.7,3.45], [6.8,4.25], [5.5,4.8], [4,5], [0,5]], [[4,5], [8,10]]],
             'S': [[[8,1.5], [7.7,0.75], [6.8,0.2], [4,0], [1.2,0.75], [0.3,1.55], [0,2.5], [0.3,3.45], [1.2,4.25], [4,5], [6.8,5.75], [7.7,6.55], [8,7.5], [7.7,8.45], [6.8,9.25], [4,10], [1.2,9.25], [0.3,8.45], [0,7.5]]],
             'T': [[[0,0],[8,0]], [[4,0],[4,10]]],
             'U': [[[0,0], [0,6], [0.3,7.5], [1.2,8.8], [2.5,9.7], [4,10], [5.5,9.7], [6.8,8.8], [7.7,7.5], [8,6], [8,0]]],
             'V': [[[0,0],[4,10],[8,0]]],
-            'W': [[[0,0],[0,10],[4,0],[8,10],[8,0]]], 
+            'W': [[[0,0],[0,10],[4,0],[8,10],[8,0]]],
             'X': [[[0,0],[8,10]], [[8,0],[0,10]]],
             'Y': [[[0,0],[4,5],[8,0]], [[4,5],[4,10]]],
             'Z': [[[0,0],[8,0],[0,10],[8,10]]],
-            '0': [[[4,0], [5.2,0.5], [6,1.8], [6.5,3.5], [6.5,5], [6.5,6.5], [6,8.2], [5.2,9.5], [4,10], [2.8,9.5], [2,8.2], [1.5,6.5], [1.5,5], [1.5,3.5], [2,1.8], [2.8,0.5], [4,0]]],
-            '1': [[[2,2],[4,0],[4,10]], [[2,10],[6,10]]],
+            '0': [[[4,0], [5.5,0.5], [6.5,2], [7,3.5], [7,6.5], [6.5,8], [5.5,9.5], [4,10], [2.5,9.5], [1.5,8], [1,6.5], [1,3.5], [1.5,2], [2.5,0.5], [4,0]]], // Widened slightly
+            '1': [[[0,0],[0,10]]], // Zero width - single vertical line just like 'I'
             '2': [[[0,2.5], [0.3,1.2], [1.2,0.4], [4,0], [6.8,0.4], [7.7,1.5], [8,3], [7.7,4.5], [0,10], [8,10]]],
             '3': [[[0,1.5], [1.2,0.4], [4,0], [6.8,0.75], [8,2.5], [6.8,4.25], [4,5], [6.8,5.75], [8,7.5], [6.8,9.25], [4,10], [1.2,9.6], [0,8.5]]],
             '4': [[[6,10],[6,0],[0,6],[0,8],[8,8]]],
@@ -195,7 +196,8 @@
             ' ': []
         };
 
-        // Calculates physical width of a text string in mm (including custom 0 width for 'I')
+        // Calculates physical width of a text string in mm
+        // 'I' and '1' have ZERO width (single vertical line)
         function getCadTextWidth(text, height, spaceDist) {
             text = text.toUpperCase();
             let w = 0;
@@ -203,8 +205,8 @@
                 if(text[i] === ' ') {
                     w += spaceDist;
                 } else {
-                    let charW = text[i] === 'I' ? 0 : (height * 0.8);
-                    w += charW + (i < text.length - 1 && text[i+1] !== ' ' ? 1 : 0); 
+                    let charW = (text[i] === 'I' || text[i] === '1') ? 0 : (height * 0.8);
+                    w += charW + (i < text.length - 1 && text[i+1] !== ' ' ? 1 : 0);
                 }
             }
             return w;
@@ -213,9 +215,9 @@
         // Draws the vector text to jsPDF with perfectly matched spacing
         function drawCadText(doc, text, startX, startY, height) {
             const spacebarDist = height === 10 ? 5 : 3;
-            const letterSpacing = 1; 
-            const scale = height / 10; 
-            
+            const letterSpacing = 1;
+            const scale = height / 10;
+
             doc.setLineWidth(0.15); // Ultra-thin CAD stroke
             let currentX = startX;
             text = text.toUpperCase();
@@ -226,9 +228,9 @@
                     currentX += spacebarDist;
                     continue;
                 }
-                
-                let charW = char === 'I' ? 0 : (height * 0.8);
-                
+
+                let charW = (char === 'I' || char === '1') ? 0 : (height * 0.8);
+
                 if (vectorFont[char]) {
                     vectorFont[char].forEach(path => {
                         for (let j = 0; j < path.length - 1; j++) {
@@ -268,12 +270,12 @@
                 document.getElementById('dateInput').value
             ].filter(val => val.trim() !== '');
 
-            let topOfNameBlock = pageHeight - borderMarg; 
+            let topOfNameBlock = pageHeight - borderMarg;
 
             if(inputs.length > 0) {
                 const heights = inputs.map((_, i) => i === 0 ? 5 : 4);
                 let maxWidth = 0;
-                
+
                 inputs.forEach((text, i) => {
                     const w = getCadTextWidth(text, heights[i], 3);
                     if(w > maxWidth) maxWidth = w;
@@ -282,24 +284,24 @@
                 // X Alignment: End of longest line is exactly 10mm from right border (198mm)
                 const startX = 198 - maxWidth;
                 let currentY = 270; // 15mm from bottom border (285mm)
-                
+
                 for(let i = inputs.length - 1; i >= 0; i--) {
                     const text = inputs[i];
                     const h = heights[i];
                     const w = getCadTextWidth(text, h, 3);
-                    
+
                     // Draw Underline
                     doc.setLineWidth(0.3);
                     doc.line(startX, currentY, startX + w, currentY);
-                    
+
                     // Text top is 1mm (underline gap) + h (height) above underline
-                    const textY = currentY - 1 - h; 
+                    const textY = currentY - 1 - h;
                     drawCadText(doc, text, startX, textY, h);
 
                     if(i === 0) topOfNameBlock = textY;
 
                     if (i > 0) {
-                        currentY = currentY - h - 4; 
+                        currentY = currentY - h - 4;
                     }
                 }
             }
@@ -309,7 +311,7 @@
             if(titleText) {
                 const titleHeight = 10;
                 const maxTitleWidth = pageWidth - 25 - 25; // 160mm
-                
+
                 // Split by newline first (user pressing Enter), then wrap if needed
                 let rawLines = titleText.split('\n').map(l => l.trim()).filter(l => l !== '');
                 if (rawLines.length === 0) rawLines = ['TITLE OF EXPERIMENT'];
@@ -333,20 +335,20 @@
                 // Y Centering Calculation
                 const availableSpace = topOfNameBlock - borderMarg;
                 const totalTitleBlockHeight = (lines.length * titleHeight) + (lines.length * 1) + ((lines.length - 1) * 5);
-                
+
                 let startY = borderMarg + (availableSpace / 2) - (totalTitleBlockHeight / 2);
 
                 lines.forEach((line, index) => {
                     const lineW = getCadTextWidth(line, titleHeight, 5);
                     // Center single lines, left-align multiple lines at 25mm
-                    const lineX = lines.length === 1 ? (pageWidth / 2) - (lineW / 2) : 25; 
-                    
+                    const lineX = lines.length === 1 ? (pageWidth / 2) - (lineW / 2) : 25;
+
                     drawCadText(doc, line, lineX, startY, titleHeight);
-                    
+
                     // Draw underline (1mm below text)
                     doc.setLineWidth(0.3);
                     doc.line(lineX, startY + titleHeight + 1, lineX + lineW, startY + titleHeight + 1);
-                    
+
                     // Move down for next line (10mm height + 1mm ul + 5mm gap)
                     startY += titleHeight + 1 + 5;
                 });
