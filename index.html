@@ -150,14 +150,11 @@
         // =====================================================================
         // GLOBAL THICKNESS VARIABLE
         // Change this ONE number to adjust Font, Border, and Underline thickness
-        // Recommended: 0.15 (Ultra-thin CAD), 0.25 (Medium), 0.4 (Thick)
         // =====================================================================
-        const LINE_THICKNESS = 0.3; 
+        const LINE_THICKNESS = 0.2; 
 
         // =====================================================================
         // 1. ULTRA-SMOOTH Simplex Vector Font Engine
-        // Grid: X from 0 to 8, Y from 0 to 10. Width = Height * 0.8
-        // 'I', '1', and '.' take exactly 10% of width (1mm for 10mm height)
         // =====================================================================
         const vectorFont = {
             'A': [[[0,10],[4,0],[8,10]], [[2,5],[6,5]]],
@@ -203,7 +200,6 @@
             ' ': [] 
         };
 
-        // Calculates physical width of a text string in mm
         function getCadTextWidth(text, height, spaceDist) {
             text = text.toUpperCase();
             let w = 0;
@@ -218,13 +214,11 @@
             return w;
         }
 
-        // Draws the vector text to jsPDF
         function drawCadText(doc, text, startX, startY, height) {
             const spacebarDist = height === 10 ? 5 : 3;
             const letterSpacing = 1; 
             const scale = height / 10; 
             
-            // USE GLOBAL THICKNESS VARIABLE FOR FONT
             doc.setLineWidth(LINE_THICKNESS); 
             let currentX = startX;
             text = text.toUpperCase();
@@ -263,13 +257,19 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-            const borderMarg = 12;
             const pageWidth = 210;
             const pageHeight = 297;
+            const targetMargin = 12; // The exact physical margin we want from the edge
 
-            // 1. Page Border (Uses Global Thickness Variable)
+            // 1. Page Border (Mathematically locked to exactly 12mm inner edge)
+            // We push the coordinate inward by half the line thickness so the inner edge sits exactly at 12mm
+            const halfThickness = LINE_THICKNESS / 2;
+            const borderStart = targetMargin + halfThickness; 
+            const borderWidth = pageWidth - (borderStart * 2);
+            const borderHeight = pageHeight - (borderStart * 2);
+
             doc.setLineWidth(LINE_THICKNESS);
-            doc.rect(borderMarg, borderMarg, pageWidth - (borderMarg*2), pageHeight - (borderMarg*2));
+            doc.rect(borderStart, borderStart, borderWidth, borderHeight);
 
             // 2. Bottom-Right Details (skip empty)
             const inputs = [
@@ -280,7 +280,7 @@
                 document.getElementById('dateInput').value
             ].filter(val => val.trim() !== '');
 
-            let topOfNameBlock = pageHeight - borderMarg; 
+            let topOfNameBlock = pageHeight - targetMargin; 
 
             if(inputs.length > 0) {
                 const heights = inputs.map((_, i) => i === 0 ? 5 : 4);
@@ -302,7 +302,6 @@
                     const h = heights[i];
                     const w = getCadTextWidth(text, h, 3);
                     
-                    // USE GLOBAL THICKNESS VARIABLE FOR UNDERLINES
                     doc.setLineWidth(LINE_THICKNESS);
                     doc.line(startX, currentY, startX + w, currentY);
                     
@@ -343,10 +342,10 @@
                 });
                 if(currentLine.trim()) lines.push(currentLine.trim());
 
-                const availableSpace = topOfNameBlock - borderMarg;
+                const availableSpace = topOfNameBlock - targetMargin;
                 const totalTitleBlockHeight = (lines.length * titleHeight) + (lines.length * 1) + ((lines.length - 1) * 5);
                 
-                let startY = borderMarg + (availableSpace / 2) - (totalTitleBlockHeight / 2);
+                let startY = targetMargin + (availableSpace / 2) - (totalTitleBlockHeight / 2);
 
                 lines.forEach((line, index) => {
                     const lineW = getCadTextWidth(line, titleHeight, 5);
@@ -356,7 +355,6 @@
                     
                     drawCadText(doc, line, lineX, startY, titleHeight);
                     
-                    // USE GLOBAL THICKNESS VARIABLE FOR TITLE UNDERLINES
                     doc.setLineWidth(LINE_THICKNESS);
                     doc.line(lineX, startY + titleHeight + 1, lineX + lineW, startY + titleHeight + 1);
                     startY += titleHeight + 1 + 5;
